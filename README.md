@@ -3,7 +3,6 @@
 > *Perl's expressiveness · Rust's safety*
 
 [![Rust](https://img.shields.io/badge/Rust-1.90+-orange.svg)](https://www.rust-lang.org)
-[![Perl](https://img.shields.io/badge/Perl-5.10+-blue.svg)](https://www.perl.org)
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-green.svg)](LICENSE)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
