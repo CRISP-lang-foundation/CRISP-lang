@@ -1,0 +1,63 @@
+[package]
+name = "crisp"
+version = "0.1.0"
+edition = "2024"
+authors = ["CRISP Team"]
+description = "CRISP - Creative Rust Implemented Scripting Paradigm"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/crisp-lang/crisp"
+
+[dependencies]
+hex = "0.4"
+# Lexer
+logos = "0.16"
+
+# Farebný výstup
+colored = "3.1"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# CLI argumenty
+clap = { version = "4.6", features = ["derive"] }
+
+# REPL
+rustyline = { version = "18.0", features = ["with-file-history"] }
+
+# Logovanie
+env_logger = "0.11"
+log = "0.4"
+
+# Náhodné čísla
+rand = "0.10"
+
+# Čas a dátum (pre time modul)
+chrono = "0.4"
+
+# Kryptografia (pre crypto modul)
+md5 = "0.8"
+sha1 = "0.11"
+sha2 = "0.11"
+base64 = "0.22"
+
+# Regulárne výrazy (pre regex modul)
+regex = "1.13"
+
+# Seriálizácia (pre json modul)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+stacksafe = "1.0"
+
+# POSIX
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+assert_matches = "1.5"
+tempfile = "3.27"
+
+[[bin]]
+name = "crisp"
+path = "src/main.rs"

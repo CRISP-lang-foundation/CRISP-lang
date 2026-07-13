@@ -1,0 +1,40 @@
+# Number guessing game — 0-9, 3 lives, with where guards
+
+let secret = rand(10);
+let lives = 3;
+
+say("Guess the number (0-9)! You have ", lives, " lives.");
+
+while lives > 0 {
+    let guess = read("Your guess: ");
+
+    match type(guess) {
+        "int" => {
+            if guess == secret {
+                say("Correct! The number was ", secret, "!");
+                break;
+            }
+
+            lives = lives - 1;
+
+            if lives == 0 {
+                say("Game over! The number was ", secret, ".");
+                break;
+            }
+
+            let diff = guess - secret;
+            if diff < 0 {
+                diff = -diff;
+            }
+
+            if diff == 1 {
+                say("Close! Lives left: ", lives);
+            } else {
+                say("Wrong! Lives left: ", lives);
+            }
+        }
+        _ => {
+            say("Please enter a number.");
+        }
+    }
+}
