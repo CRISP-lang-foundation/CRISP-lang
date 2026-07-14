@@ -361,6 +361,32 @@ let data = {
 say data.users[0].name;  # Alice
 ```
 
+### Multi-Dimensional Arrays
+
+```crisp
+# Nested array literals
+let @matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+];
+
+# Chained indexing
+say @matrix[1][2];        # → 6
+say @matrix[0];            # → [1, 2, 3]
+
+# Nested for-loops
+for row in @matrix {
+    for cell in row {
+        say cell;           # → 1 2 3 4 5 6 7 8 9
+    }
+}
+
+# Contains works on arrays of arrays
+let @row = @matrix[0];
+say @row.contains(2);       # → true
+```
+
 ### References
 ```crisp
 # Create a reference
@@ -437,9 +463,15 @@ if pid == 0 {
 }
 
 # File operations
-let fd = posix["open"]("/tmp/test.txt", O_WRONLY | O_CREAT, 0o644);
+let fd = posix["open"]("./test.txt",
+    posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
 posix["write"](fd, "Hello POSIX!\n", 13);
 posix["close"](fd);
+
+let fd2 = posix["open"]("./test.txt", posix["O_RDONLY"]);
+let data = posix["read"](fd2, 100);
+posix["close"](fd2);
+say data;
 
 # No namespace pollution — console read() still works!
 let input = readline("> ");
@@ -498,6 +530,7 @@ crisp/
 - `filter(arr, callback)` — Filter array
 
 ### Array Methods (via `.method()` syntax)
+- `.contains(val)` — Check if array contains value
 - `.push(val)` — Append element(s), returns new length
 - `.pop()` — Remove and return last element
 - `.shift()` — Remove and return first element
@@ -512,6 +545,7 @@ crisp/
 
 ### String Methods
 - `.len()` — String length
+- `.contains(substr)` — Check if string contains substring
 - `.split(delim)` — Split into array
 - `.join(sep)` — Join array into string
 
