@@ -48,7 +48,6 @@ struct Cli {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a thread with a larger stack (16 MB)
     let result = std::thread::Builder::new()
         .stack_size(16 * 1024 * 1024)
         .spawn(|| {
@@ -71,10 +70,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    // CENTRAL DEBUG SETUP
     if cli.debug {
         diagnostics::init_diagnostics(true);
-        diagnostics::set_debug_level(diagnostics::DebugLevel::Normal); // Normal, not Verbose!
+        diagnostics::set_debug_level(diagnostics::DebugLevel::Normal);
         println!("🐛 Debug mode ON (Normal)");
     } else {
         diagnostics::init_diagnostics(false);
@@ -101,18 +99,13 @@ fn run_main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_file(file: &PathBuf, print_ast: bool) -> Result<(), Box<dyn std::error::Error>> {
-    // Check file extension
     if let Some(ext) = file.extension() {
         if ext != "csp" && ext != "crisp" {
-            eprintln!(
-                "Warning: File '{}' has non-standard extension",
-                file.display()
-            );
+            eprintln!("⚠Warning: File '{}' has non-standard extension", file.display());
             eprintln!("   Expected: .csp or .crisp");
-            // Continue but warn
         }
     } else {
-        eprintln!("Warning: File '{}' has no extension", file.display());
+        eprintln!("⚠Warning: File '{}' has no extension", file.display());
         eprintln!("   Expected: .csp or .crisp");
     }
 
@@ -123,6 +116,7 @@ fn run_file(file: &PathBuf, print_ast: bool) -> Result<(), Box<dyn std::error::E
 fn run_code(code: &str, print_ast: bool) -> Result<(), Box<dyn std::error::Error>> {
     use colored::*;
     use eval::Interpreter;
+    use eval::RuntimeError;
     use lexer::Lexer;
     use parser::Parser;
 
@@ -145,6 +139,9 @@ fn run_code(code: &str, print_ast: bool) -> Result<(), Box<dyn std::error::Error
             Ok(())
         }
         Err(e) => {
+            if let RuntimeError::ExitSignal(code) = &e {
+                std::process::exit(*code);
+            }
             eprintln!("{} {}", "Error:".red().bold(), e);
             std::process::exit(1);
         }

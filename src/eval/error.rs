@@ -15,7 +15,6 @@
 //! Error handling for the interpreter
 
 use thiserror::Error;
-
 use crate::value::Value;
 
 #[derive(Error, Debug, Clone)]
@@ -69,12 +68,17 @@ pub enum RuntimeError {
     /// Internal sentinel — emitted by `continue` inside a loop.
     #[error("Continue signal")]
     ContinueSignal,
-    
+
     /// User-triggered error via `throw()` or `die()`.
     /// The `{0}` format means catch blocks see the raw message
     /// without a "User error:" prefix.
     #[error("{0}")]
     UserError(String),
+
+    /// Internal sentinel — emitted by `exit()`.
+    /// Carries the process exit code. NOT catchable by try/catch.
+    #[error("Exit signal ({0})")]
+    ExitSignal(i32),
 }
 
 pub type EvalError = RuntimeError;
