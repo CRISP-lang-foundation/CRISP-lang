@@ -3,13 +3,15 @@
 > *Perl's expressiveness · Rust's safety*
 
 [![Rust](https://img.shields.io/badge/Rust-1.90+-orange.svg)](https://www.rust-lang.org)
+[![Top Language](https://img.shields.io/github/languages/top/Peter-L-SVK/pro_audio_config)](https://github.com/Peter-L-SVK/CRISP-lang)
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-green.svg)](LICENSE)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is CRISP?
 
-**CRISP** is a scripting language that combines the **expressiveness of Perl 5** with the **safety and performance of Rust**. Write powerful scripts with Perl-inspired syntax, run them on a Rust-powered interpreter that guarantees memory safety and blazing speed. Best from world of Python, Perl, Rust and C.
+**CRISP** is a scripting language that combines the **expressiveness of Perl 5** with the **safety and performance of Rust**. Write powerful scripts with Perl-inspired syntax, run them on a Rust-powered interpreter that guarantees memory safety and blazing speed. Best from world of Python, Perl, Rust and C.  
 
+For more details read the ebook. 
 
 ## Quick Start
 
@@ -590,66 +592,13 @@ cargo run -- examples/stdlib_demo.crisp
 - ✅ **Array/string slicing** — `arr[1..3]`, `str[0..4]`
 - ✅ **Range expressions** — `1..10`, `"a".."z"`
 
-## Roadmap
-
-### v0.1.0 — Foundation
-- [x] Lexer with full token support
-- [x] Parser with AST generation (Pratt parser)
-- [x] Tree-walking interpreter
-- [x] Core value system
-- [x] Basic standard library
-- [x] POSIX system calls (opt-in via `use posix`)
-- [x] REPL interface
-- [x] CLI with one-liner support
-- [x] Named functions (`fn`) with recursion
-- [x] Lambda functions with return
-- [x] While and For loops with `break`/`continue`
-- [x] Variable assignment (`x = expr`)
-- [x] Hash and Array data structures
-- [x] Conditional statements (if/else/else-if)
-- [x] String concatenation
-- [x] Full support for binary ops
-- [x] Hash field access (dot notation)
-- [x] Automatic hash key conversion
-- [x] Try/Catch/Finally with `catch e as err` alias
-- [x] throw / die keywords
-- [x] Method chaining on arrays, hashes, strings
-- [x] Sigil variables ($scalar, @array, &ref)
-- [x] Array/string slicing and ranges
-- [x] References (\ref and ^deref)
-- [x] Match with `where` guards (pattern matching)
-- [x] Console I/O: `readline`, `read`, `input` with flush semantics
-- [x] `rand()` random number generator
-- [x] `int()` / `float()` type conversion
-- [x] `null` equality comparisons
-
-### v0.2.0 — Advanced Features
-- [ ] Module system (extend `use` for user-defined modules, import paths)
-- [ ] Full regex engine (beyond basic `=~` and `s///`)
-- [ ] OOP — Python3/Perl-like class system
-- [ ] JSON serialization
-- [ ] Network sockets
-- [ ] Stack traces for debugging
-- [ ] More type coercion (int ↔ float autoconversion)
-- [ ] Named arguments in function calls
-
-### v0.3.0 — Performance
-- [ ] Bytecode VM
-- [ ] JIT compilation
-- [ ] Async/Await support
-- [ ] Multi-threading
-
-### v1.0.0 — Production Ready
-- [ ] Stable language spec
-- [ ] Comprehensive standard library
-- [ ] Package manager (CRISPAN)
-- [ ] Language Server Protocol (LSP)
-- [ ] Full documentation
-
 ## Contributing
 
 We welcome contributions!
+See [CONTRIBUTING](https://github.com/Peter-L-SVK/CRISP-lang/blob/main/CONTRIBUTING.md) file for details.  
 
+If you wish to express your Ideas feel free to do so in Discussions.  
+  
 1. Fork the repository
 2. Create a feature branch
 3. Write code with tests
@@ -667,8 +616,8 @@ We welcome contributions!
 
 This project is dual-licensed under:
 
-- **MIT License**
-- **Apache License 2.0**
+- **MIT License** - [MIT License](LICENSE-MIT) - see the LICENSE file for details.
+- **Apache License 2.0** -  [Apache License 2.0](LICENSE-APACHE) - see the LICENSE file for details.
 
 ---
 
