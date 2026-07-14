@@ -1954,16 +1954,21 @@ say "PPID: ", posix["getppid"]();
 use posix;
 
 # Low-level file descriptor operations
-let fd = posix["open"]("data.txt", O_WRONLY | O_CREAT, 0o644);
+let fd = posix["open"]("/tmp/test.txt",
+    posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
 posix["write"](fd, "Hello POSIX!\n", 13);
 posix["close"](fd);
 
 # Seek in file
-let fd2 = posix["open"]("data.bin", O_RDONLY);
-posix["lseek"](fd2, 0, SEEK_END);
-let size = posix["lseek"](fd2, 0, SEEK_CUR);
-say "File size: ", size;
-posix["close"](fd2);
+let fd = posix["open"]("data.txt",
+    posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
+posix["write"](fd, "Hello POSIX!\n", 13);
+posix["close"](fd);
+
+# Seek in file
+let fd2 = posix["open"]("data.bin", posix["O_RDONLY"]);
+posix["lseek"](fd2, 0, posix["SEEK_END"]);
+let size = posix["lseek"](fd2, 0, posix["SEEK_CUR"]);
 \end{lstlisting}
 \end{tcolorbox}
 
@@ -1974,7 +1979,7 @@ posix["close"](fd2);
 use posix;
 
 # Send signal to a process
-posix["kill"](pid, SIGTERM);
+posix["kill"](pid, posix["SIGTERM"]);
 
 # Set an alarm
 posix["alarm"](5);  # SIGALRM in 5 seconds
@@ -2352,7 +2357,6 @@ client.close();
 \end{itemize}
 \end{tcolorbox}
 
-\clearpage
 % --- 16. Comparison ---
 \section{Comparison with Other Languages}
 
