@@ -22,6 +22,7 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{pifont}
+\usepackage{longtable}
 
 \usetikzlibrary{shapes.geometric, arrows.meta, decorations.pathmorphing, patterns, calc, positioning, shadows}
 
@@ -413,7 +414,7 @@ let len2 = len([1, 2, 3]);     # 3
 let len3 = len({ a => 1, b => 2 });  # 2
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 % --- References and Pointer Semantics ---
 \section{References and Pointer Semantics}
 
@@ -1389,31 +1390,28 @@ Values with hash type support method dispatch via the dot syntax. When a method 
 \begin{lstlisting}
 # Array methods
 let @arr = [1, 2, 3];
-@arr.push(4);           # [1, 2, 3, 4]
-say @arr.pop();         # 4
-say @arr.len();         # 3
+@arr.push(4);                    # [1, 2, 3, 4]
+say @arr.pop();                  # 4
+say @arr.len();                  # 3
+say @arr.contains(2);            # true
 
 # String methods
-say "hello world".len();          # 11
-say "a,b,c".split(",");           # ["a", "b", "c"]
+say "hello world".len();         # 11
+say "a,b,c".split(",");          # ["a", "b", "c"]
+say "hello".contains("ell");     # true
 
 # Hash methods
 let %h = { a => 1, b => 2, c => 3 };
-say %h.keys();                    # ["a", "b", "c"]
-say %h.values();                  # [1, 2, 3]
+say %h.keys();                   # ["a", "b", "c"]
+say %h.values();                 # [1, 2, 3]
 
 # Chaining methods
 let result = [3, 1, 2]
     .push(4)
     .filter(|x| => x % 2 == 0);
-
-# Storing methods in hashes
-let %obj = {
-    name => "CRISP",
-    greet => fn() { return "Hello!"; }
-};
-say %obj.greet();  # Hello!
+say result;                      # [2, 4]
 \end{lstlisting}
+
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Function Environment}}, fonttitle=\bfseries, sharp corners]
@@ -1424,7 +1422,7 @@ Each function (named or lambda) captures a reference-counted pointer (\texttt{Rc
 \end{itemize}
 The self-reference mechanism (the function's own name bound inside its body) enables recursion without requiring global name resolution at each recursive call.
 \end{tcolorbox}
-
+\clearpage
 % --- 7. Error Handling ---
 \section{Error Handling}
 
@@ -1491,7 +1489,7 @@ try {
 # Output: inner: inner error
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 \subsection{Throw and Die}
 
 Both \texttt{throw} and \texttt{die} produce catchable \texttt{UserError} values. They are interchangeable:
@@ -1901,6 +1899,7 @@ for func in posix {
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Module System}}, fonttitle=\bfseries, sharp corners]
 The module system is under active development. Currently, only \texttt{use posix;} is supported. Future releases will extend this to user-defined modules (\texttt{use mymodule;}), import paths, and selective imports. The namespaced hash pattern (each module creating its own hash) will be the standard approach for all modules.
 \end{tcolorbox}
+\clearpage
 
 % --- 11. System Programming ---
 \section{System Programming with POSIX}
@@ -2196,6 +2195,111 @@ say len({ a => 1, b => 2 });      # 2
 \end{lstlisting}
 \end{tcolorbox}
 
+% --- Multi-Dimensional Arrays ---
+\section{Multi-Dimensional Arrays}
+
+CRISP supports nested array literals, chained indexing, and nested iteration — all building on the existing array primitives without special syntax or additional types.
+
+\subsection{Nested Array Literals}
+
+Arrays can contain other arrays, enabling matrix-like and jagged structures:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested Arrays}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Single-line nested array
+let @matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+# Multi-line nested array
+let @grid = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+];
+
+# Jagged arrays (rows of different lengths)
+let @jagged = [[1, 2], [3, 4, 5], [6]];
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Chained Indexing}
+
+Postfix indexing chains naturally for multi-dimensional access:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Chained Indexing}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let @matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+# Single index returns a row (an array)
+say @matrix[0];       # [1, 2, 3]
+
+# Chained indexing drills into nested arrays
+say @matrix[1][2];    # 6
+
+# Deep nesting
+let @cube = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+say @cube[0][1][0];   # 3
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Nested Iteration}
+
+\texttt{for} loops iterate over each level, enabling nested traversal:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested For Loops}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Print each cell of a matrix
+for row in @matrix {
+    for cell in row {
+        say cell;
+    }
+}
+# Output: 1 2 3 4 5 6 7 8 9
+
+# Collect all elements into a flat array
+let @flat = [];
+for row in @matrix {
+    for cell in row {
+        @flat.push(cell);
+    }
+}
+say @flat;  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Operations on Nested Arrays}
+
+All array methods work on nested arrays. \texttt{.contains()} checks for membership at each level:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested Array Operations}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let @matrix = [[1, 2], [3, 4]];
+
+# Row-level operations
+let @row = @matrix[0];
+say @row.contains(2);    # true
+
+# Matrix-level operations
+say @matrix.len();       # 2 (number of rows)
+say @matrix[1].len();    # 2 (length of row 1)
+
+# Map over rows
+let @transformed = @matrix.map(|row| => row.map(|x| => x * 2));
+say @transformed;        # [[2, 4], [6, 8]]
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: No Special Matrix Type}}, fonttitle=\bfseries, sharp corners]
+CRISP does not have a special matrix or tensor type. Multi-dimensional arrays are simply arrays of arrays. This design choice provides:
+
+\begin{itemize}
+    \item \textbf{Simplicity:} No new types, syntax, or concepts to learn
+    \item \textbf{Flexibility:} Jagged arrays (rows of different lengths) are natural
+    \item \textbf{Composability:} All existing array methods (\texttt{.map()}, \texttt{.filter()}, \texttt{.contains()}) work on nested arrays without modification
+\end{itemize}
+
+Future releases may add dedicated linear algebra operations (\texttt{transpose}, \texttt{reshape}, \texttt{flatten}) as array methods.
+\end{tcolorbox}
+
 % --- 13. JSON Serialization (Planned) ---
 \section{JSON Serialization (Planned)}
 
@@ -2293,7 +2397,7 @@ CRISP continues to evolve with planned features:
     \item \textbf{Windows Support:} Full cross-platform compatibility
 \end{itemize}
 \end{tcolorbox}
-
+\clearpage
 % --- 18. Conclusion ---
 \section{Conclusion}
 
@@ -2317,7 +2421,7 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 \textbf{\textcolor{rustorange}{"Keep your code CRISP and clean."}}
 \end{tcolorbox}
-
+\clearpage
 % --- Appendix A: Standard Library Reference ---
 \section{Standard Library Reference}
 
@@ -2373,9 +2477,9 @@ CRISP represents a significant step forward in scripting language design, bridgi
 \end{itemize}
 
 \subsection{Method Dispatch (Value Methods)}
-\texttt{Array methods:} \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}
+\texttt{Array methods:} \texttt{.contains(val)}, \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}
 
-\texttt{String methods:} \texttt{.len()}, \texttt{.split(delim)}
+\texttt{String methods:} \texttt{.contains(substr)}, \texttt{.len()}, \texttt{.split(delim)}, \texttt{.join(sep)}
 
 \texttt{Hash methods:} \texttt{.keys()}, \texttt{.values()}, \texttt{.len()}
 
@@ -2396,16 +2500,28 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 All CRISP keywords with their syntax and behavior.
 
-\begin{table}[H]
-\centering
 \rowcolors{2}{softviolet!30}{white}
-\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0}}
-\vspace{0.3em}
-\begin{tabular}{@{}llp{8cm}@{}}
+\begin{longtable}{@{}llp{8cm}@{}}
+\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0}}\\
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
+\endfirsthead
+
+\caption[]{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0} (continued)}\\
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{3}{r}{\small\textit{Continued on next page}}\\
+\endfoot
+
+\bottomrule
+\endlastfoot
 
 \texttt{let} & Declaration &
 Declares a new variable with optional initialization.\\
@@ -2465,8 +2581,7 @@ Introduces a block whose errors can be caught.\\
 
 \texttt{catch} & Error Handling &
 Catches errors from a preceding \texttt{try} block.\\
-& & \texttt{catch e \{ say e; \}} \\
-& & \texttt{catch e as err \{ say err; \}} (alias syntax) \\
+& & \texttt{catch e \{ say e; \}} \hspace{1em} \texttt{catch e as err \{ say err; \}} (alias) \\
 
 \texttt{finally} & Error Handling &
 Block that always executes after \texttt{try} (and \texttt{catch}), regardless of errors.\\
@@ -2482,13 +2597,11 @@ Emits a catchable \texttt{UserError} with a message. Interchangeable with \textt
 
 \texttt{print} & Output &
 Outputs arguments to stdout without trailing newline.\\
-& & \texttt{print "Hello, ", name;} \\
-& & \texttt{print("Hello, ", name);} (paren syntax) \\
+& & \texttt{print "Hello, ", name;} \hspace{1em} \texttt{print("Hello, ", name);} (paren) \\
 
 \texttt{say} & Output &
 Outputs arguments to stdout with automatic trailing newline.\\
-& & \texttt{say "Hello, ", name, "!";} \\
-& & \texttt{say("Hello, ", name);} (paren syntax) \\
+& & \texttt{say "Hello, ", name, "!";} \hspace{1em} \texttt{say("Hello, ", name);} (paren) \\
 
 \texttt{warn} & Output &
 Outputs arguments to stderr with "Warning:" prefix.\\
@@ -2511,9 +2624,8 @@ Represents absence of value. Returned by failed conversions.\\
 & & \texttt{let x = null;} \hspace{1em} \texttt{if x == null \{ ... \}} \\
 
 \bottomrule
-\end{tabular}
-\end{table}
-
+\end{longtable}
+\clearpage
 \subsection{Control Flow Keywords}
 
 \begin{table}[H]
@@ -2572,6 +2684,7 @@ The following are built-in functions, not keywords — they are stored in the gl
 \bottomrule
 \end{tabular}
 \end{table}
+\clearpage
 
 % --- Bibliography ---
 \section*{\textcolor{darkpurple}{References}}
