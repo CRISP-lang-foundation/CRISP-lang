@@ -857,7 +857,27 @@ impl Interpreter {
                         let joined: String =
                             arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
                         Ok(Value::Str(joined.into()))
-                    }
+                    },
+		    "contains" => {
+			if call_args.len() < 2 {
+			    return Err(RuntimeError::ArgumentError(
+				"contains() requires an argument".into(),
+			    ));
+			}
+			match &call_args[0] {
+			    Value::Str(haystack) => {
+				let needle = call_args[1].as_str();
+				Ok(Value::Bool(haystack.contains(&needle)))
+			    }
+			    Value::Array(arr) => {
+				let arr = arr.borrow();
+				let needle = &call_args[1];
+				let found = arr.iter().any(|v| v.as_str() == needle.as_str());
+				Ok(Value::Bool(found))
+			    }
+			    _ => Err(RuntimeError::TypeMismatch),
+			}
+		    },
                     "push" => match &call_args[0] {
                         Value::Array(a) => {
                             for val in &call_args[1..] {

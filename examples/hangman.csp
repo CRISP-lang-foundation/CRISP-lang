@@ -1,0 +1,77 @@
+# hangman.csp — Classic Hangman in CRISP
+
+fn display_word(word, guessed) {
+    let result = "";
+    for ch in word {
+        if guessed.contains(ch) {
+            result = result + ch + " ";
+        } else {
+            result = result + "_ ";
+        }
+    }
+    return result;
+}
+
+fn stage(n) {
+    if n == 0 { return "  +---+\n  |   |\n      |\n      |\n      |\n      |\n========="; }
+    if n == 1 { return "  +---+\n  |   |\n  O   |\n      |\n      |\n      |\n========="; }
+    if n == 2 { return "  +---+\n  |   |\n  O   |\n  |   |\n      |\n      |\n========="; }
+    if n == 3 { return "  +---+\n  |   |\n  O   |\n /|   |\n      |\n      |\n========="; }
+    if n == 4 { return "  +---+\n  |   |\n  O   |\n /|\\  |\n      |\n      |\n========="; }
+    if n == 5 { return "  +---+\n  |   |\n  O   |\n /|\\  |\n /    |\n      |\n========="; }
+    return "  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========";
+}
+
+let words = ["crisp", "rust", "perl", "python", "compiler", "interpreter", "variable", "function", "closure", "syntax", "lambda", "parser", "lexer", "token", "hangman", "keyboard", "monitor", "terminal", "algorithm", "caffeine", "developer", "debugging"];
+
+let idx = int(rand() * 1000) % words.len();
+let word = words[idx];
+let guessed = "";
+let wrong = 0;
+let max_wrong = 6;
+
+say("Welcome to CRISP Hangman!");
+say("Guess the word before the hangman is complete.");
+say("The word has " + word.len() + " letters.");
+
+while wrong < max_wrong {
+    say(stage(wrong));
+    say("");
+    say("Word: " + display_word(word, guessed));
+    say("Guessed: " + guessed);
+    say("Wrong left: " + (max_wrong - wrong));
+
+    let input = readline("Guess a letter: ");
+    if input.len() == 0 { continue; }
+
+    let letter = input[0];
+
+    if guessed.contains(letter) {
+        say("You already guessed '" + letter + "'!");
+        continue;
+    }
+
+    guessed = guessed + letter;
+
+    if word.contains(letter) {
+        let all_found = true;
+        for ch in word {
+            if !guessed.contains(ch) { all_found = false; break; }
+        }
+        if all_found {
+            say("Word: " + display_word(word, guessed));
+            say("You won! The word was '" + word + "'!");
+            exit(0);
+        }
+        say("Correct!");
+    } else {
+        wrong = wrong + 1;
+        if wrong == max_wrong {
+            say(stage(wrong));
+            say("Game over! The word was '" + word + "'.");
+            exit(0);
+        }
+        say("Wrong!");
+    }
+    say("");
+}
