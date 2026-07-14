@@ -105,6 +105,33 @@ pub fn register_all(env: &mut Environment) {
         }),
     );
 
+    // ── Process control ─────────────────────────────────────────
+    env.define(
+        "exit",
+        Value::NativeFn(|args| {
+            let code = match args.first() {
+                Some(Value::Int(n)) => *n as i32,
+                Some(v) if v.as_number().is_some() => v.as_number().unwrap() as i32,
+                Some(_) => 1,
+                None => 0,
+            };
+            Err(crate::eval::RuntimeError::ExitSignal(code))
+        }),
+    );
+
+    env.define(
+        "_exit",
+        Value::NativeFn(|args| {
+            let code = match args.first() {
+                Some(Value::Int(n)) => *n as i32,
+                Some(v) if v.as_number().is_some() => v.as_number().unwrap() as i32,
+                Some(_) => 1,
+                None => 0,
+            };
+            std::process::exit(code);
+        }),
+    );
+    
     register_builtins(env);
 }
 

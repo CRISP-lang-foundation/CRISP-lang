@@ -5,20 +5,20 @@
 
 # LaTeX (the book)
 
-docs/*.aux
-docs/*.log
-docs/*.out
-docs/*.toc
-docs/*.lot
-docs/*.lof
-docs/*.bbl
-docs/*.blg
-docs/*.synctex.gz
-docs/*.fdb_latexmk
-docs/*.fls
-docs/*.nav
-docs/*.snm
-docs/*.vrb
+ebook/*.aux
+ebook/*.log
+ebook/*.out
+ebook/*.toc
+ebook/*.lot
+ebook/*.lof
+ebook/*.bbl
+ebook/*.blg
+ebook/*.synctex.gz
+ebook/*.fdb_latexmk
+ebook/*.fls
+ebook/*.nav
+ebook/*.snm
+ebook/*.vrb
 
 # Keep the compiled PDF (optional — remove if you want to ignore it too)
 # docs/*.pdf

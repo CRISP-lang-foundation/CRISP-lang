@@ -22,6 +22,7 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{pifont}
+\usepackage{longtable}
 
 \usetikzlibrary{shapes.geometric, arrows.meta, decorations.pathmorphing, patterns, calc, positioning, shadows}
 
@@ -159,7 +160,7 @@
 % Version badge
 \begin{tcolorbox}[colback=darkpurple, colframe=darkpurple, width=4cm, center, sharp corners, boxrule=0pt]
     \centering
-    {\large\bfseries\color{codegold}Version 0.1.0}
+    {\large\bfseries\color{codegold}Version 0.1.3}
 \end{tcolorbox}
 
 \vfill
@@ -169,6 +170,12 @@
 
 \end{titlepage}
 
+\clearpage
+
+% --- Table of Contents ---
+\phantomsection
+\addcontentsline{toc}{section}{\contentsname}
+\tableofcontents
 \clearpage
 
 % --- Abstract ---
@@ -413,7 +420,7 @@ let len2 = len([1, 2, 3]);     # 3
 let len3 = len({ a => 1, b => 2 });  # 2
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 % --- References and Pointer Semantics ---
 \section{References and Pointer Semantics}
 
@@ -1389,31 +1396,28 @@ Values with hash type support method dispatch via the dot syntax. When a method 
 \begin{lstlisting}
 # Array methods
 let @arr = [1, 2, 3];
-@arr.push(4);           # [1, 2, 3, 4]
-say @arr.pop();         # 4
-say @arr.len();         # 3
+@arr.push(4);                    # [1, 2, 3, 4]
+say @arr.pop();                  # 4
+say @arr.len();                  # 3
+say @arr.contains(2);            # true
 
 # String methods
-say "hello world".len();          # 11
-say "a,b,c".split(",");           # ["a", "b", "c"]
+say "hello world".len();         # 11
+say "a,b,c".split(",");          # ["a", "b", "c"]
+say "hello".contains("ell");     # true
 
 # Hash methods
 let %h = { a => 1, b => 2, c => 3 };
-say %h.keys();                    # ["a", "b", "c"]
-say %h.values();                  # [1, 2, 3]
+say %h.keys();                   # ["a", "b", "c"]
+say %h.values();                 # [1, 2, 3]
 
 # Chaining methods
 let result = [3, 1, 2]
     .push(4)
     .filter(|x| => x % 2 == 0);
-
-# Storing methods in hashes
-let %obj = {
-    name => "CRISP",
-    greet => fn() { return "Hello!"; }
-};
-say %obj.greet();  # Hello!
+say result;                      # [2, 4]
 \end{lstlisting}
+
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Function Environment}}, fonttitle=\bfseries, sharp corners]
@@ -1424,7 +1428,7 @@ Each function (named or lambda) captures a reference-counted pointer (\texttt{Rc
 \end{itemize}
 The self-reference mechanism (the function's own name bound inside its body) enables recursion without requiring global name resolution at each recursive call.
 \end{tcolorbox}
-
+\clearpage
 % --- 7. Error Handling ---
 \section{Error Handling}
 
@@ -1491,7 +1495,7 @@ try {
 # Output: inner: inner error
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 \subsection{Throw and Die}
 
 Both \texttt{throw} and \texttt{die} produce catchable \texttt{UserError} values. They are interchangeable:
@@ -1576,12 +1580,55 @@ assert(x > 0, "x must be positive");
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Error Signals}}, fonttitle=\bfseries, sharp corners]
-CRISP implements three internal sentinel errors (\texttt{RuntimeError::ReturnSignal}, \texttt{BreakSignal}, \texttt{ContinueSignal}) that unwind through the interpreter's call stack. These are not caught by \texttt{catch} blocks — only real errors are. The \texttt{try/catch/finally} handler distinguishes between them:
+CRISP implements four internal sentinel errors (\texttt{RuntimeError::ReturnSignal}, 
+\texttt{BreakSignal}, \texttt{ContinueSignal}, \texttt{ExitSignal}) that unwind 
+through the interpreter's call stack. These are not caught by \texttt{catch} blocks — 
+only real errors are. The \texttt{try/catch/finally} handler distinguishes between them:
 \begin{itemize}
     \item \textbf{Real errors:} Captured by \texttt{catch}, then \texttt{finally} executes
     \item \textbf{Control-flow signals:} Bypass \texttt{catch}, \texttt{finally} still executes, then the signal is re-emitted
+    \item \textbf{ExitSignal:} Propagates through all boundaries including
+    \texttt{try/catch} and loops. \texttt{finally} blocks execute, then the
+    process terminates with the given exit code. Not catchable by \texttt{catch}.
 \end{itemize}
 This ensures \texttt{break} from inside a \texttt{try} block inside a loop works as expected — the loop receives the \texttt{BreakSignal} after \texttt{finally} runs.
+\end{tcolorbox}
+
+\subsection{Exit}
+
+The \texttt{exit()} function terminates the process with an optional exit code. It produces a special \texttt{ExitSignal} that is \textbf{not catchable} by \texttt{try/catch} blocks. However, \texttt{finally} blocks still execute before the process terminates:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Exit}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Exit with default code 0
+exit();
+
+# Exit with specific code
+exit(1);
+
+# finally runs before exit
+try {
+    exit(2);
+} finally {
+    say "cleanup runs!";
+}
+# Output: cleanup runs!
+# Process exits with code 2
+
+# _exit() skips finally — immediate hard exit
+_exit(0);  # no cleanup, process dies immediately
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: ExitSignal vs. \_exit}}, fonttitle=\bfseries, sharp corners]
+CRISP provides two exit mechanisms:
+
+\begin{itemize}
+    \item \texttt{exit(code?)} — Emits \texttt{ExitSignal}, which propagates through \texttt{finally} blocks before the process terminates. This ensures cleanup code runs. Not catchable by \texttt{catch} — it always terminates.
+    \item \texttt{\_exit(code?)} — Calls Rust's \texttt{std::process::exit} directly. No cleanup, no \texttt{finally}, immediate termination. Use when you need a hard stop.
+\end{itemize}
+
+The \texttt{ExitSignal} uses the same sentinel-error mechanism as \texttt{return}/\texttt{break}/\texttt{continue} to unwind the call stack, ensuring \texttt{finally} blocks execute before the interpreter propagates the signal to the top level and calls \texttt{std::process::exit}.
 \end{tcolorbox}
 
 % --- 8. Pattern Matching ---
@@ -1665,7 +1712,7 @@ match readline("Enter: ") {
 }
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 \subsection{Where Guards}
 
 \texttt{where} guards add conditions to pattern arms. The guard expression is evaluated after the pattern matches, and the arm only fires if the guard is true:
@@ -1901,6 +1948,7 @@ for func in posix {
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Module System}}, fonttitle=\bfseries, sharp corners]
 The module system is under active development. Currently, only \texttt{use posix;} is supported. Future releases will extend this to user-defined modules (\texttt{use mymodule;}), import paths, and selective imports. The namespaced hash pattern (each module creating its own hash) will be the standard approach for all modules.
 \end{tcolorbox}
+\clearpage
 
 % --- 11. System Programming ---
 \section{System Programming with POSIX}
@@ -1955,16 +2003,21 @@ say "PPID: ", posix["getppid"]();
 use posix;
 
 # Low-level file descriptor operations
-let fd = posix["open"]("data.txt", O_WRONLY | O_CREAT, 0o644);
+let fd = posix["open"]("/tmp/test.txt",
+    posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
+posix["write"](fd, "Hello POSIX!\n", 13);
+posix["close"](fd);
+
+# Write to file
+let fd = posix["open"]("data.txt",
+    posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
 posix["write"](fd, "Hello POSIX!\n", 13);
 posix["close"](fd);
 
 # Seek in file
-let fd2 = posix["open"]("data.bin", O_RDONLY);
-posix["lseek"](fd2, 0, SEEK_END);
-let size = posix["lseek"](fd2, 0, SEEK_CUR);
-say "File size: ", size;
-posix["close"](fd2);
+let fd2 = posix["open"]("data.bin", posix["O_RDONLY"]);
+posix["lseek"](fd2, 0, posix["SEEK_END"]);
+let size = posix["lseek"](fd2, 0, posix["SEEK_CUR"]);
 \end{lstlisting}
 \end{tcolorbox}
 
@@ -1975,7 +2028,7 @@ posix["close"](fd2);
 use posix;
 
 # Send signal to a process
-posix["kill"](pid, SIGTERM);
+posix["kill"](pid, posix["SIGTERM"]);
 
 # Set an alarm
 posix["alarm"](5);  # SIGALRM in 5 seconds
@@ -2011,36 +2064,46 @@ say env;
 
 \begin{table}[H]
 \centering
-\rowcolors{2}{softviolet!30}{white}
 \caption{\textcolor{darkpurple}{POSIX Functions}}
 \vspace{0.3em}
-\begin{tabular}{@{}lllp{6cm}@{}}
+\begin{tabular}{@{}lllp{3.2cm}@{}}
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
-\multirow{6}{*}{Processes} & \texttt{fork} & \texttt{posix["fork"]() → Int} & Create child process \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Processes}}} \\
+\rowcolor{softviolet!30}
+& \texttt{fork} & \texttt{posix["fork"]() → Int} & Create child process \\
 & \texttt{execvp} & \texttt{posix["execvp"](file, args...)} & Execute program \\
 & \texttt{waitpid} & \texttt{posix["waitpid"](pid, opts) → Int} & Wait for child \\
 & \texttt{spawn} & \texttt{posix["spawn"](cmd, args...)} & Spawn process \\
 & \texttt{getpid} & \texttt{posix["getpid"]() → Int} & Current PID \\
 & \texttt{getppid} & \texttt{posix["getppid"]() → Int} & Parent PID \\
-\midrule
-\multirow{2}{*}{Signals} & \texttt{kill} & \texttt{posix["kill"](pid, sig)} & Send signal \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Signals}}} \\
+\rowcolor{softviolet!30}
+& \texttt{kill} & \texttt{posix["kill"](pid, sig)} & Send signal \\
 & \texttt{alarm} & \texttt{posix["alarm"](secs)} & Schedule alarm \\
-\midrule
-\multirow{4}{*}{Users} & \texttt{getuid} & \texttt{posix["getuid"]() → Int} & Real UID \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Users}}} \\
+\rowcolor{softviolet!30}
+& \texttt{getuid} & \texttt{posix["getuid"]() → Int} & Real UID \\
 & \texttt{geteuid} & \texttt{posix["geteuid"]() → Int} & Effective UID \\
 & \texttt{getgid} & \texttt{posix["getgid"]() → Int} & Real GID \\
 & \texttt{getegid} & \texttt{posix["getegid"]() → Int} & Effective GID \\
-\midrule
-\multirow{4}{*}{Files} & \texttt{open} & \texttt{posix["open"](path, flags, mode?) → Int} & Open file \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Files}}} \\
+\rowcolor{softviolet!30}
+& \texttt{open} & \texttt{posix["open"](path, flags, mode?) → Int} & Open file \\
 & \texttt{close} & \texttt{posix["close"](fd)} & Close file \\
 & \texttt{read} & \texttt{posix["read"](fd, count) → Str} & Read bytes \\
 & \texttt{write} & \texttt{posix["write"](fd, data, len) → Int} & Write bytes \\
 & \texttt{lseek} & \texttt{posix["lseek"](fd, offset, whence) → Int} & Seek position \\
-\midrule
-\multirow{3}{*}{Env} & \texttt{getenv} & \texttt{posix["getenv"](name) → Str} & Get env var \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Env}}} \\
+\rowcolor{softviolet!30}
+& \texttt{getenv} & \texttt{posix["getenv"](name) → Str} & Get env var \\
 & \texttt{setenv} & \texttt{posix["setenv"](name, value)} & Set env var \\
 & \texttt{environ} & \texttt{posix["environ"]() → Hash} & All env vars \\
 \bottomrule
@@ -2059,7 +2122,7 @@ CRISP's decision to namespace POSIX under the \texttt{posix} hash solves the cla
 
 This pattern will extend to future modules: \texttt{use network;} creates a \texttt{network} hash, \texttt{use json;} creates a \texttt{json} hash, etc.
 \end{tcolorbox}
-
+\clearpage
 % --- 12. Console I/O ---
 \section{Console Input and Output}
 
@@ -2196,6 +2259,111 @@ say len({ a => 1, b => 2 });      # 2
 \end{lstlisting}
 \end{tcolorbox}
 
+% --- Multi-Dimensional Arrays ---
+\section{Multi-Dimensional Arrays}
+
+CRISP supports nested array literals, chained indexing, and nested iteration — all building on the existing array primitives without special syntax or additional types.
+
+\subsection{Nested Array Literals}
+
+Arrays can contain other arrays, enabling matrix-like and jagged structures:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested Arrays}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Single-line nested array
+let @matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+# Multi-line nested array
+let @grid = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+];
+
+# Jagged arrays (rows of different lengths)
+let @jagged = [[1, 2], [3, 4, 5], [6]];
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Chained Indexing}
+
+Postfix indexing chains naturally for multi-dimensional access:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Chained Indexing}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let @matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+# Single index returns a row (an array)
+say @matrix[0];       # [1, 2, 3]
+
+# Chained indexing drills into nested arrays
+say @matrix[1][2];    # 6
+
+# Deep nesting
+let @cube = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
+say @cube[0][1][0];   # 3
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Nested Iteration}
+
+\texttt{for} loops iterate over each level, enabling nested traversal:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested For Loops}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Print each cell of a matrix
+for row in @matrix {
+    for cell in row {
+        say cell;
+    }
+}
+# Output: 1 2 3 4 5 6 7 8 9
+
+# Collect all elements into a flat array
+let @flat = [];
+for row in @matrix {
+    for cell in row {
+        @flat.push(cell);
+    }
+}
+say @flat;  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Operations on Nested Arrays}
+
+All array methods work on nested arrays. \texttt{.contains()} checks for membership at each level:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested Array Operations}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let @matrix = [[1, 2], [3, 4]];
+
+# Row-level operations
+let @row = @matrix[0];
+say @row.contains(2);    # true
+
+# Matrix-level operations
+say @matrix.len();       # 2 (number of rows)
+say @matrix[1].len();    # 2 (length of row 1)
+
+# Map over rows
+let @transformed = @matrix.map(|row| => row.map(|x| => x * 2));
+say @transformed;        # [[2, 4], [6, 8]]
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: No Special Matrix Type}}, fonttitle=\bfseries, sharp corners]
+CRISP does not have a special matrix or tensor type. Multi-dimensional arrays are simply arrays of arrays. This design choice provides:
+
+\begin{itemize}
+    \item \textbf{Simplicity:} No new types, syntax, or concepts to learn
+    \item \textbf{Flexibility:} Jagged arrays (rows of different lengths) are natural
+    \item \textbf{Composability:} All existing array methods (\texttt{.map()}, \texttt{.filter()}, \texttt{.contains()}) work on nested arrays without modification
+\end{itemize}
+
+Future releases may add dedicated linear algebra operations (\texttt{transpose}, \texttt{reshape}, \texttt{flatten}) as array methods.
+\end{tcolorbox}
+
 % --- 13. JSON Serialization (Planned) ---
 \section{JSON Serialization (Planned)}
 
@@ -2233,7 +2401,6 @@ client.close();
 \end{lstlisting}
 \end{tcolorbox}
 
-\clearpage
 % --- 15. Performance ---
 \section{Performance}
 
@@ -2248,7 +2415,6 @@ client.close();
 \end{itemize}
 \end{tcolorbox}
 
-\clearpage
 % --- 16. Comparison ---
 \section{Comparison with Other Languages}
 
@@ -2273,7 +2439,7 @@ Fast Startup & \cmark & \cmark & \xmark & \xmark & \cmark \\
 \bottomrule
 \end{tabular}
 \end{table}
-
+\clearpage
 % --- 17. Future Directions ---
 \section{Future Directions}
 
@@ -2317,7 +2483,7 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 \textbf{\textcolor{rustorange}{"Keep your code CRISP and clean."}}
 \end{tcolorbox}
-
+\clearpage
 % --- Appendix A: Standard Library Reference ---
 \section{Standard Library Reference}
 
@@ -2336,6 +2502,12 @@ CRISP represents a significant step forward in scripting language design, bridgi
     \item \texttt{die(msg)} — Emit catchable UserError.
     \item \texttt{throw(msg)} — Alias for die (catchable).
     \item \texttt{assert(cond, msg?)} — Testing assertion.
+\end{itemize}
+
+\subsection{Process Control}
+\begin{itemize}
+    \item \texttt{exit(code?)} — Terminate process with exit code (default 0). \texttt{finally} blocks execute before termination. Not catchable.
+    \item \texttt{\_exit(code?)} — Hard exit via \texttt{std::process::exit}. No cleanup, immediate termination.
 \end{itemize}
 
 \subsection{Type Conversion and Introspection}
@@ -2373,9 +2545,9 @@ CRISP represents a significant step forward in scripting language design, bridgi
 \end{itemize}
 
 \subsection{Method Dispatch (Value Methods)}
-\texttt{Array methods:} \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}
+\texttt{Array methods:} \texttt{.contains(val)}, \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}
 
-\texttt{String methods:} \texttt{.len()}, \texttt{.split(delim)}
+\texttt{String methods:} \texttt{.contains(substr)}, \texttt{.len()}, \texttt{.split(delim)}, \texttt{.join(sep)}
 
 \texttt{Hash methods:} \texttt{.keys()}, \texttt{.values()}, \texttt{.len()}
 
@@ -2396,16 +2568,28 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 All CRISP keywords with their syntax and behavior.
 
-\begin{table}[H]
-\centering
 \rowcolors{2}{softviolet!30}{white}
-\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0}}
-\vspace{0.3em}
-\begin{tabular}{@{}llp{8cm}@{}}
+\begin{longtable}{@{}llp{8cm}@{}}
+\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0}}\\
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
+\endfirsthead
+
+\caption[]{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0} (continued)}\\
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{3}{r}{\small\textit{Continued on next page}}\\
+\endfoot
+
+\bottomrule
+\endlastfoot
 
 \texttt{let} & Declaration &
 Declares a new variable with optional initialization.\\
@@ -2465,8 +2649,7 @@ Introduces a block whose errors can be caught.\\
 
 \texttt{catch} & Error Handling &
 Catches errors from a preceding \texttt{try} block.\\
-& & \texttt{catch e \{ say e; \}} \\
-& & \texttt{catch e as err \{ say err; \}} (alias syntax) \\
+& & \texttt{catch e \{ say e; \}} \hspace{1em} \texttt{catch e as err \{ say err; \}} (alias) \\
 
 \texttt{finally} & Error Handling &
 Block that always executes after \texttt{try} (and \texttt{catch}), regardless of errors.\\
@@ -2482,13 +2665,11 @@ Emits a catchable \texttt{UserError} with a message. Interchangeable with \textt
 
 \texttt{print} & Output &
 Outputs arguments to stdout without trailing newline.\\
-& & \texttt{print "Hello, ", name;} \\
-& & \texttt{print("Hello, ", name);} (paren syntax) \\
+& & \texttt{print "Hello, ", name;} \hspace{1em} \texttt{print("Hello, ", name);} (paren) \\
 
 \texttt{say} & Output &
 Outputs arguments to stdout with automatic trailing newline.\\
-& & \texttt{say "Hello, ", name, "!";} \\
-& & \texttt{say("Hello, ", name);} (paren syntax) \\
+& & \texttt{say "Hello, ", name, "!";} \hspace{1em} \texttt{say("Hello, ", name);} (paren) \\
 
 \texttt{warn} & Output &
 Outputs arguments to stderr with "Warning:" prefix.\\
@@ -2511,9 +2692,8 @@ Represents absence of value. Returned by failed conversions.\\
 & & \texttt{let x = null;} \hspace{1em} \texttt{if x == null \{ ... \}} \\
 
 \bottomrule
-\end{tabular}
-\end{table}
-
+\end{longtable}
+\clearpage
 \subsection{Control Flow Keywords}
 
 \begin{table}[H]
@@ -2549,6 +2729,10 @@ The following are built-in functions, not keywords — they are stored in the gl
 \textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
 \texttt{assert} & \texttt{assert(cond, msg?)} & Testing assertion. Errors if condition is false. \\
+\texttt{exit} & \texttt{exit(code?) → never returns} &
+Terminates process with exit code. \texttt{finally} blocks execute. Not catchable.\\
+\texttt{\_exit} & \texttt{\_exit(code?) → never returns} &
+Hard process exit. No cleanup, skips \texttt{finally}.\\
 \texttt{int} & \texttt{int(value) → Int ∣ Null} & Parse string to integer. Returns null on failure. \\
 \texttt{float} & \texttt{float(value) → Float ∣ Null} & Parse string to float. Returns null on failure. \\
 \texttt{type} & \texttt{type(value) → String} & Returns type name: "int", "float", "string", "array", "hash", "bool", "null", "ref", "function". \\
@@ -2572,6 +2756,7 @@ The following are built-in functions, not keywords — they are stored in the gl
 \bottomrule
 \end{tabular}
 \end{table}
+\clearpage
 
 % --- Bibliography ---
 \section*{\textcolor{darkpurple}{References}}

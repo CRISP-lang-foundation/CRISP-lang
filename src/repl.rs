@@ -160,6 +160,13 @@ fn execute_code(
                 Ok(Some(value))
             }
         }
-        Err(e) => Err(e.to_string()),
+        Err(e) => {
+            // ExitSignal must terminate the process — it must NOT be caught
+            // and printed as a regular error in the REPL.
+            if let crate::eval::RuntimeError::ExitSignal(code) = &e {
+                std::process::exit(*code);
+            }
+            Err(e.to_string())
+        }
     }
 }

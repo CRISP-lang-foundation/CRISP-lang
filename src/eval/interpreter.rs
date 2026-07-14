@@ -93,6 +93,7 @@ impl Interpreter {
                         "continue outside loop".into(),
                     ));
                 }
+                Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
                 Err(e) => return Err(e),
             }
         }
@@ -110,7 +111,7 @@ impl Interpreter {
                 self.env.borrow_mut().define(name, value);
                 Ok(Value::Null)
             }
-	    Stmt::Assign { name, expr } => {
+            Stmt::Assign { name, expr } => {
                 let value = self.eval_expression(expr)?;
                 self.env.borrow_mut().set(name, value)?;
                 Ok(Value::Null)
@@ -190,6 +191,7 @@ impl Interpreter {
                             Err(RuntimeError::ContinueSignal) => {
                                 break; // exit inner for, continue outer while
                             }
+                            Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
                             Err(e) => return Err(e),
                         }
                     }
@@ -227,6 +229,10 @@ impl Interpreter {
                                         continue_outer = true;
                                         break;
                                     }
+                                    Err(e @ RuntimeError::ExitSignal(_)) => {
+                                        self.env = old_env;
+                                        return Err(e);
+                                    }
                                     Err(e) => {
                                         self.env = old_env;
                                         return Err(e);
@@ -262,6 +268,10 @@ impl Interpreter {
                                     Err(RuntimeError::ContinueSignal) => {
                                         continue_outer = true;
                                         break;
+                                    }
+                                    Err(e @ RuntimeError::ExitSignal(_)) => {
+                                        self.env = old_env;
+                                        return Err(e);
                                     }
                                     Err(e) => {
                                         self.env = old_env;
@@ -299,6 +309,10 @@ impl Interpreter {
                                     Err(RuntimeError::ContinueSignal) => {
                                         continue_outer = true;
                                         break;
+                                    }
+                                    Err(e @ RuntimeError::ExitSignal(_)) => {
+                                        self.env = old_env;
+                                        return Err(e);
                                     }
                                     Err(e) => {
                                         self.env = old_env;
@@ -348,7 +362,7 @@ impl Interpreter {
                 }
                 Ok(result)
             }
-                        Stmt::Use(module) => {
+            Stmt::Use(module) => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                     eprintln!("Use module: {}", module);
                 }
@@ -406,6 +420,15 @@ impl Interpreter {
                             continue_signal = true;
                             break;
                         }
+                        Err(e @ RuntimeError::ExitSignal(_)) => {
+                            // Finally always executes before exit propagates
+                            if let Some(finally) = finally_block {
+                                for s in finally {
+                                    let _ = self.eval_statement(s);
+                                }
+                            }
+                            return Err(e);
+                        }
                         Err(e) => {
                             error_val = Some(Value::Str(e.to_string().into()));
                             break;
@@ -449,6 +472,18 @@ impl Interpreter {
                                 Err(RuntimeError::ContinueSignal) => {
                                     continue_signal = true;
                                     break;
+                                }
+                                Err(e @ RuntimeError::ExitSignal(_)) => {
+                                    if let Some(old) = saved_env {
+                                        self.env = old;
+                                    }
+                                    // Finally always executes before exit propagates
+                                    if let Some(finally) = finally_block {
+                                        for s in finally {
+                                            let _ = self.eval_statement(s);
+                                        }
+                                    }
+                                    return Err(e);
                                 }
                                 Err(e) => {
                                     if let Some(old) = saved_env {
@@ -551,6 +586,10 @@ impl Interpreter {
                             Err(RuntimeError::ContinueSignal) => {
                                 self.env = old_env;
                                 return Err(RuntimeError::ContinueSignal);
+                            }
+                            Err(e @ RuntimeError::ExitSignal(_)) => {
+                                self.env = old_env;
+                                return Err(e);
                             }
                             Err(e) => {
                                 self.env = old_env;
@@ -818,7 +857,27 @@ impl Interpreter {
                         let joined: String =
                             arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
                         Ok(Value::Str(joined.into()))
-                    }
+                    },
+		    "contains" => {
+			if call_args.len() < 2 {
+			    return Err(RuntimeError::ArgumentError(
+				"contains() requires an argument".into(),
+			    ));
+			}
+			match &call_args[0] {
+			    Value::Str(haystack) => {
+				let needle = call_args[1].as_str();
+				Ok(Value::Bool(haystack.contains(&needle)))
+			    }
+			    Value::Array(arr) => {
+				let arr = arr.borrow();
+				let needle = &call_args[1];
+				let found = arr.iter().any(|v| v.as_str() == needle.as_str());
+				Ok(Value::Bool(found))
+			    }
+			    _ => Err(RuntimeError::TypeMismatch),
+			}
+		    },
                     "push" => match &call_args[0] {
                         Value::Array(a) => {
                             for val in &call_args[1..] {
@@ -975,6 +1034,7 @@ impl Interpreter {
                                                     "continue outside loop".into(),
                                                 ));
                                             }
+                                            Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
                                             Err(e) => return Err(e),
                                         }
                                     }
@@ -1265,6 +1325,10 @@ impl Interpreter {
                                         "continue outside loop".into(),
                                     ));
                                 }
+                                Err(e @ RuntimeError::ExitSignal(_)) => {
+                                    self.recursion_depth -= 1;
+                                    return Err(e);
+                                }
                                 Err(e) => {
                                     self.recursion_depth -= 1;
                                     if diagnostics::get_debug_level()
@@ -1427,7 +1491,7 @@ impl Interpreter {
                     return Ok(Value::Str(format!("{}{}", left.as_str(), right.as_str()).into()));
                 }
 
-		// Null equality
+                // Null equality
                 if matches!(left, Value::Null) || matches!(right, Value::Null) {
                     match op {
                         Eq => return Ok(Value::Bool(matches!(left, Value::Null) && matches!(right, Value::Null))),
@@ -1435,7 +1499,7 @@ impl Interpreter {
                         _ => return Err(RuntimeError::TypeMismatch),
                     }
                 }
-	
+
                 if matches!(op, Repeat) {
                     if let Value::Int(n) = right {
                         if n >= 0 {
@@ -1489,6 +1553,10 @@ impl Interpreter {
                             return Err(RuntimeError::InvalidOperation(
                                 "continue outside loop".into(),
                             ));
+                        }
+                        Err(e @ RuntimeError::ExitSignal(_)) => {
+                            self.recursion_depth = saved_recursion;
+                            return Err(e);
                         }
                         Err(e) => {
                             self.recursion_depth = saved_recursion;
