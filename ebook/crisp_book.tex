@@ -172,6 +172,12 @@
 
 \clearpage
 
+% --- Table of Contents ---
+\phantomsection
+\addcontentsline{toc}{section}{\contentsname}
+\tableofcontents
+\clearpage
+
 % --- Abstract ---
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Abstract}}, fonttitle=\bfseries\large, sharp corners]
 \textbf{CRISP} (Creative Rust Implemented Scripting Paradigm) is a modern scripting language that combines the expressiveness of Perl 5 with the safety and performance of Rust. This paper presents the formal design, implementation, and evaluation of CRISP. Unlike traditional scripting languages, CRISP offers native regular expressions, lambda functions with return support, automatic hash key conversion, field access via dot notation, and full POSIX system call integration—all while maintaining memory safety guarantees inherited from its Rust implementation. We discuss the language architecture, standard library, and performance characteristics, and provide empirical evidence of its viability as a replacement for Perl, Python, and Bash in system scripting contexts.
@@ -1574,12 +1580,55 @@ assert(x > 0, "x must be positive");
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Error Signals}}, fonttitle=\bfseries, sharp corners]
-CRISP implements three internal sentinel errors (\texttt{RuntimeError::ReturnSignal}, \texttt{BreakSignal}, \texttt{ContinueSignal}) that unwind through the interpreter's call stack. These are not caught by \texttt{catch} blocks — only real errors are. The \texttt{try/catch/finally} handler distinguishes between them:
+CRISP implements four internal sentinel errors (\texttt{RuntimeError::ReturnSignal}, 
+\texttt{BreakSignal}, \texttt{ContinueSignal}, \texttt{ExitSignal}) that unwind 
+through the interpreter's call stack. These are not caught by \texttt{catch} blocks — 
+only real errors are. The \texttt{try/catch/finally} handler distinguishes between them:
 \begin{itemize}
     \item \textbf{Real errors:} Captured by \texttt{catch}, then \texttt{finally} executes
     \item \textbf{Control-flow signals:} Bypass \texttt{catch}, \texttt{finally} still executes, then the signal is re-emitted
+    \item \textbf{ExitSignal:} Propagates through all boundaries including
+    \texttt{try/catch} and loops. \texttt{finally} blocks execute, then the
+    process terminates with the given exit code. Not catchable by \texttt{catch}.
 \end{itemize}
 This ensures \texttt{break} from inside a \texttt{try} block inside a loop works as expected — the loop receives the \texttt{BreakSignal} after \texttt{finally} runs.
+\end{tcolorbox}
+
+\subsection{Exit}
+
+The \texttt{exit()} function terminates the process with an optional exit code. It produces a special \texttt{ExitSignal} that is \textbf{not catchable} by \texttt{try/catch} blocks. However, \texttt{finally} blocks still execute before the process terminates:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Exit}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Exit with default code 0
+exit();
+
+# Exit with specific code
+exit(1);
+
+# finally runs before exit
+try {
+    exit(2);
+} finally {
+    say "cleanup runs!";
+}
+# Output: cleanup runs!
+# Process exits with code 2
+
+# _exit() skips finally — immediate hard exit
+_exit(0);  # no cleanup, process dies immediately
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: ExitSignal vs. \_exit}}, fonttitle=\bfseries, sharp corners]
+CRISP provides two exit mechanisms:
+
+\begin{itemize}
+    \item \texttt{exit(code?)} — Emits \texttt{ExitSignal}, which propagates through \texttt{finally} blocks before the process terminates. This ensures cleanup code runs. Not catchable by \texttt{catch} — it always terminates.
+    \item \texttt{\_exit(code?)} — Calls Rust's \texttt{std::process::exit} directly. No cleanup, no \texttt{finally}, immediate termination. Use when you need a hard stop.
+\end{itemize}
+
+The \texttt{ExitSignal} uses the same sentinel-error mechanism as \texttt{return}/\texttt{break}/\texttt{continue} to unwind the call stack, ensuring \texttt{finally} blocks execute before the interpreter propagates the signal to the top level and calls \texttt{std::process::exit}.
 \end{tcolorbox}
 
 % --- 8. Pattern Matching ---
@@ -1663,7 +1712,7 @@ match readline("Enter: ") {
 }
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 \subsection{Where Guards}
 
 \texttt{where} guards add conditions to pattern arms. The guard expression is evaluated after the pattern matches, and the arm only fires if the guard is true:
@@ -1959,7 +2008,7 @@ let fd = posix["open"]("/tmp/test.txt",
 posix["write"](fd, "Hello POSIX!\n", 13);
 posix["close"](fd);
 
-# Seek in file
+# Write to file
 let fd = posix["open"]("data.txt",
     posix["O_WRONLY"] | posix["O_CREAT"], 0o644);
 posix["write"](fd, "Hello POSIX!\n", 13);
@@ -2015,36 +2064,46 @@ say env;
 
 \begin{table}[H]
 \centering
-\rowcolors{2}{softviolet!30}{white}
 \caption{\textcolor{darkpurple}{POSIX Functions}}
 \vspace{0.3em}
-\begin{tabular}{@{}lllp{6cm}@{}}
+\begin{tabular}{@{}lllp{3.2cm}@{}}
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
-\multirow{6}{*}{Processes} & \texttt{fork} & \texttt{posix["fork"]() → Int} & Create child process \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Processes}}} \\
+\rowcolor{softviolet!30}
+& \texttt{fork} & \texttt{posix["fork"]() → Int} & Create child process \\
 & \texttt{execvp} & \texttt{posix["execvp"](file, args...)} & Execute program \\
 & \texttt{waitpid} & \texttt{posix["waitpid"](pid, opts) → Int} & Wait for child \\
 & \texttt{spawn} & \texttt{posix["spawn"](cmd, args...)} & Spawn process \\
 & \texttt{getpid} & \texttt{posix["getpid"]() → Int} & Current PID \\
 & \texttt{getppid} & \texttt{posix["getppid"]() → Int} & Parent PID \\
-\midrule
-\multirow{2}{*}{Signals} & \texttt{kill} & \texttt{posix["kill"](pid, sig)} & Send signal \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Signals}}} \\
+\rowcolor{softviolet!30}
+& \texttt{kill} & \texttt{posix["kill"](pid, sig)} & Send signal \\
 & \texttt{alarm} & \texttt{posix["alarm"](secs)} & Schedule alarm \\
-\midrule
-\multirow{4}{*}{Users} & \texttt{getuid} & \texttt{posix["getuid"]() → Int} & Real UID \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Users}}} \\
+\rowcolor{softviolet!30}
+& \texttt{getuid} & \texttt{posix["getuid"]() → Int} & Real UID \\
 & \texttt{geteuid} & \texttt{posix["geteuid"]() → Int} & Effective UID \\
 & \texttt{getgid} & \texttt{posix["getgid"]() → Int} & Real GID \\
 & \texttt{getegid} & \texttt{posix["getegid"]() → Int} & Effective GID \\
-\midrule
-\multirow{4}{*}{Files} & \texttt{open} & \texttt{posix["open"](path, flags, mode?) → Int} & Open file \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Files}}} \\
+\rowcolor{softviolet!30}
+& \texttt{open} & \texttt{posix["open"](path, flags, mode?) → Int} & Open file \\
 & \texttt{close} & \texttt{posix["close"](fd)} & Close file \\
 & \texttt{read} & \texttt{posix["read"](fd, count) → Str} & Read bytes \\
 & \texttt{write} & \texttt{posix["write"](fd, data, len) → Int} & Write bytes \\
 & \texttt{lseek} & \texttt{posix["lseek"](fd, offset, whence) → Int} & Seek position \\
-\midrule
-\multirow{3}{*}{Env} & \texttt{getenv} & \texttt{posix["getenv"](name) → Str} & Get env var \\
+\rowcolor{lightlavender}
+\multicolumn{4}{@{}l@{}}{\textbf{\textcolor{darkpurple}{Env}}} \\
+\rowcolor{softviolet!30}
+& \texttt{getenv} & \texttt{posix["getenv"](name) → Str} & Get env var \\
 & \texttt{setenv} & \texttt{posix["setenv"](name, value)} & Set env var \\
 & \texttt{environ} & \texttt{posix["environ"]() → Hash} & All env vars \\
 \bottomrule
@@ -2063,7 +2122,7 @@ CRISP's decision to namespace POSIX under the \texttt{posix} hash solves the cla
 
 This pattern will extend to future modules: \texttt{use network;} creates a \texttt{network} hash, \texttt{use json;} creates a \texttt{json} hash, etc.
 \end{tcolorbox}
-
+\clearpage
 % --- 12. Console I/O ---
 \section{Console Input and Output}
 
@@ -2342,7 +2401,6 @@ client.close();
 \end{lstlisting}
 \end{tcolorbox}
 
-\clearpage
 % --- 15. Performance ---
 \section{Performance}
 
@@ -2381,7 +2439,7 @@ Fast Startup & \cmark & \cmark & \xmark & \xmark & \cmark \\
 \bottomrule
 \end{tabular}
 \end{table}
-
+\clearpage
 % --- 17. Future Directions ---
 \section{Future Directions}
 
@@ -2401,7 +2459,7 @@ CRISP continues to evolve with planned features:
     \item \textbf{Windows Support:} Full cross-platform compatibility
 \end{itemize}
 \end{tcolorbox}
-\clearpage
+
 % --- 18. Conclusion ---
 \section{Conclusion}
 
@@ -2444,6 +2502,12 @@ CRISP represents a significant step forward in scripting language design, bridgi
     \item \texttt{die(msg)} — Emit catchable UserError.
     \item \texttt{throw(msg)} — Alias for die (catchable).
     \item \texttt{assert(cond, msg?)} — Testing assertion.
+\end{itemize}
+
+\subsection{Process Control}
+\begin{itemize}
+    \item \texttt{exit(code?)} — Terminate process with exit code (default 0). \texttt{finally} blocks execute before termination. Not catchable.
+    \item \texttt{\_exit(code?)} — Hard exit via \texttt{std::process::exit}. No cleanup, immediate termination.
 \end{itemize}
 
 \subsection{Type Conversion and Introspection}
@@ -2665,6 +2729,10 @@ The following are built-in functions, not keywords — they are stored in the gl
 \textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
 \texttt{assert} & \texttt{assert(cond, msg?)} & Testing assertion. Errors if condition is false. \\
+\texttt{exit} & \texttt{exit(code?) → never returns} &
+Terminates process with exit code. \texttt{finally} blocks execute. Not catchable.\\
+\texttt{\_exit} & \texttt{\_exit(code?) → never returns} &
+Hard process exit. No cleanup, skips \texttt{finally}.\\
 \texttt{int} & \texttt{int(value) → Int ∣ Null} & Parse string to integer. Returns null on failure. \\
 \texttt{float} & \texttt{float(value) → Float ∣ Null} & Parse string to float. Returns null on failure. \\
 \texttt{type} & \texttt{type(value) → String} & Returns type name: "int", "float", "string", "array", "hash", "bool", "null", "ref", "function". \\
