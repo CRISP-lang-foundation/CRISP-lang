@@ -20,7 +20,7 @@ use rustyline::config::Configurer;
 use rustyline::{DefaultEditor, EditMode, error::ReadlineError};
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", "🦀 CRISP v0.1.0 - 2026".cyan().bold());
+    println!("{}", "🦀 CRISP v0.1.3 - 2026".cyan().bold());
     println!(
         "{}",
         "Creative Rust Implemented Scripting Paradigm".dimmed()
