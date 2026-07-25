@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Typy hodnôt v CRISP
+//! Types of values in CRISP
 
 use crate::eval::RuntimeError;
 use std::cell::RefCell;
@@ -31,10 +31,23 @@ pub enum Value {
     Ref(Rc<RefCell<Value>>),
     NativeFn(fn(&[Value]) -> Result<Value, RuntimeError>),
     UserFn {
-        name: String, // <-- PRIDANÉ: meno funkcie
+        name: String,
         params: Vec<String>,
         body: Vec<crate::parser::Stmt>,
         env: Rc<RefCell<crate::eval::Environment>>,
+    },
+    // --- OOP ---
+    Class {
+        name: String,
+        parent: Option<String>,
+        methods: Rc<HashMap<String, Value>>,
+        static_methods: Rc<HashMap<String, Value>>,
+        env: Rc<RefCell<crate::eval::Environment>>,
+    },
+    Object {
+        class: String,
+        fields: Rc<RefCell<HashMap<String, Value>>>,
+        methods: Rc<HashMap<String, Value>>,
     },
 }
 

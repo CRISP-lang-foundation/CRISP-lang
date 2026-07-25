@@ -1,0 +1,27 @@
+# ----- CRISP Rectangle Demo -------------------------------------
+
+class Rectangle {
+    fn new(width, height) {
+        self.width = width;
+        self.height = height;
+    }
+
+    fn area() {
+        return self.width * self.height;
+    }
+
+    fn can_hold(other) {
+        return self.width > other.width && self.height > other.height;
+    }
+}
+
+let rect1 = Rectangle.new(30, 50);
+let rect2 = Rectangle.new(10, 40);
+let rect3 = Rectangle.new(60, 45);
+
+say "Area of rect1 is ", rect1.area();
+say "Area of rect2 is ", rect2.area();
+say "Area of rect3 is ", rect3.area();
+
+say "Can rect1 hold rect2? ", rect1.can_hold(rect2);
+say "Can rect1 hold rect3? ", rect1.can_hold(rect3);

@@ -79,6 +79,18 @@ pub enum TokenKind {
     #[token("as")]
     As,
 
+    // --- OOP keywords ---
+    #[token("class")]
+    Class,
+    #[token("extends")]
+    Extends,
+    #[token("self")]
+    SelfKeyword,
+    #[token("super")]
+    Super,
+    #[token("static")]
+    Static,
+
     // Sigils
     #[token("$")]
     Dollar,
@@ -201,7 +213,6 @@ pub enum TokenKind {
     #[regex(r"-?0[xX][0-9a-fA-F_]+|-?0[oO][0-7_]+|-?0[bB][01_]+|-?[0-9][0-9_]*", |lex| lex.slice().to_string())]
     Int(String),
 
-
     // Float literals
     #[regex(r"-?[0-9]+\.[0-9]+", |lex| lex.slice().to_string())]
     Float(String),
@@ -213,9 +224,10 @@ pub enum TokenKind {
     SingleString(String),
 
     // Regex literals
-    #[regex(r"/[^/]*/", |lex| lex.slice().to_string())]
+    #[regex(r"m/[^/\n;]*/", |lex| lex.slice().to_string())]
     Regex(String),
-    #[regex(r"qr/[^/]*/", |lex| lex.slice().to_string())]
+    
+    #[regex(r"qr/[^/\n;]*/", |lex| lex.slice().to_string())]
     QuotedRegex(String),
 
     #[end]

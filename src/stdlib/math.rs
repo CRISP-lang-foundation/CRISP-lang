@@ -39,12 +39,17 @@ pub fn register(env: &mut Environment) {
         "pow",
         Value::NativeFn(|args| {
             if args.len() < 2 {
-                return Err(RuntimeError::ArgumentError(
-                    "pow needs base and exponent".into(),
-                ));
+                return Err(RuntimeError::ArgumentError("pow needs base and exponent".into()));
             }
             let base = args[0].as_number().ok_or(RuntimeError::TypeMismatch)?;
             let exp = args[1].as_number().ok_or(RuntimeError::TypeMismatch)?;
+
+            // Return Int when both args are integers, Float otherwise
+            if let (Value::Int(b), Value::Int(e)) = (&args[0], &args[1]) {
+                if *e >= 0 && (*e as u64) <= u32::MAX as u64 {
+                    return Ok(Value::Int(b.pow(*e as u32)));
+                }
+            }
             Ok(Value::Float(base.powf(exp)))
         }),
     );

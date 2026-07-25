@@ -169,4 +169,12 @@ mod tests {
         let tokens = lexer.tokens();
         assert_eq!(tokens.len(), 1);
     }
+
+    #[test]
+    fn test_division_not_confused_with_regex() {
+	let lexer = Lexer::new("10 / 2; 20 / 4;");
+	let tokens = lexer.tokens();
+	// Int, Slash, Int, Semicolon, Int, Slash, Int, Semicolon
+	assert!(tokens.iter().any(|t| matches!(t.kind, TokenKind::Slash)));
+    }
 }

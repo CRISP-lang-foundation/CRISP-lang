@@ -19,7 +19,7 @@ use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
 
 pub fn register(env: &mut Environment) {
-    // length - dĺžka reťazca
+    // length of string
     env.define(
         "length",
         Value::NativeFn(|args| {
@@ -32,7 +32,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // split - rozdelenie reťazca
+    // split string
     env.define(
         "split",
         Value::NativeFn(|args| {
@@ -54,7 +54,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // join - spojenie reťazcov
+    // join strings
     env.define(
         "join",
         Value::NativeFn(|args| {
@@ -78,7 +78,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // trim - orezanie
+    // trim the string
     env.define(
         "trim",
         Value::NativeFn(|args| {

@@ -20,7 +20,7 @@ use crate::value::Value;
 use regex::Regex;
 
 pub fn register(env: &mut Environment) {
-    // regex_match() - kontrola zhody
+    // regex_match() - check if pattern matches
     env.define(
         "regex_match",
         Value::NativeFn(|args| {
@@ -40,7 +40,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // regex_replace() - náhrada
+    // regex_replace() - replace all occurrences
     env.define(
         "regex_replace",
         Value::NativeFn(|args| {
@@ -62,7 +62,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // regex_split() - rozdelenie podľa regex
+    // regex_split() - split by a regex pattern
     env.define(
         "regex_split",
         Value::NativeFn(|args| {
@@ -87,7 +87,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // regex_find_all() - nájdenie všetkých výskytov
+    // regex_find_all() - find all matches
     env.define(
         "regex_find_all",
         Value::NativeFn(|args| {
@@ -112,7 +112,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // regex_capture() - zachytenie skupín
+    // regex_capture() - capture groups
     env.define(
         "regex_capture",
         Value::NativeFn(|args| {

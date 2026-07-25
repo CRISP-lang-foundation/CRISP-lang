@@ -21,7 +21,7 @@ use serde_json::{Map, Number, Value as JsonValue};
 use std::collections::HashMap;
 
 pub fn register(env: &mut Environment) {
-    // to_json() - konverzia hodnoty na JSON reťazec
+    // to_json() - conversion of value to JSON string
     env.define(
         "to_json",
         Value::NativeFn(|args| {
@@ -35,7 +35,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // from_json() - konverzia JSON reťazca na hodnotu
+    // from_json() - conversion of JSON string to value
     env.define(
         "from_json",
         Value::NativeFn(|args| {
@@ -51,7 +51,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // to_json_pretty() - pekne formátovaný JSON
+    // to_json_pretty()
     env.define(
         "to_json_pretty",
         Value::NativeFn(|args| {
@@ -67,7 +67,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // json_valid() - validácia JSON reťazca
+    // json_valid() - validation of JSON string
     env.define(
         "json_valid",
         Value::NativeFn(|args| {
