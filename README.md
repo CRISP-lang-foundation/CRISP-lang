@@ -1,17 +1,16 @@
-# 🦀 CRISP - Creative Rust Implemented Scripting Paradigm
+# 🦀 CRISP — Creative Rust Implemented Scripting Paradigm
 
-> *Perl's expressiveness · Rust's safety*
+> *Perl's expressiveness · Python's clarity · Rust's safety*
 
 [![Rust](https://img.shields.io/badge/Rust-1.90+-orange.svg)](https://www.rust-lang.org)
-[![Top Language](https://img.shields.io/github/languages/top/Peter-L-SVK/pro_audio_config)](https://github.com/Peter-L-SVK/CRISP-lang)
+[![Top Language](https://img.shields.io/github/languages/top/Peter-L-SVK/CRISP-lang)](https://github.com/Peter-L-SVK/CRISP-lang)
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-green.svg)](LICENSE)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is CRISP?
 
-**CRISP** is a scripting language that combines the **expressiveness of Perl 5** with the **safety and performance of Rust**. Write powerful scripts with Perl-inspired syntax, run them on a Rust-powered interpreter that guarantees memory safety and blazing speed. Best from world of Python, Perl, Rust and C.  
+**CRISP** is a scripting language that combines the **expressiveness of Perl 5** with the **safety and performance of Rust** — plus the best ideas from Python, Perl, Rust, and C. Write powerful scripts with familiar syntax, run them on a Rust-powered interpreter that guarantees memory safety and blazing speed.
 
-For more details read the ebook. 
+For a deeper dive, read the ebook.
 
 ## Quick Start
 
@@ -19,8 +18,8 @@ For more details read the ebook.
 
 ```bash
 # Clone the repository
-git clone https://github.com/crisp-lang/crisp.git
-cd crisp
+git clone https://github.com/Peter-L-SVK/CRISP-lang.git
+cd CRISP-lang
 
 # Build
 cargo build --release
@@ -45,9 +44,12 @@ crisp -e 'say "Hello, CRISP!"'
 crisp --ast examples/hello.crisp
 ```
 
+---
+
 ## Language Examples
 
 ### Hello World
+
 ```crisp
 # Perl-style comments
 say "Hello, CRISP!";        # With newline
@@ -65,6 +67,7 @@ say person;                         # {name: John, age: 30}
 ```
 
 ### Sigil Variables (Perl-style)
+
 ```crisp
 # $scalar — single value
 let $count = 42;
@@ -81,7 +84,63 @@ let &callback = |x| => x * 2;
 say &callback(5);               # → 10
 ```
 
+### Class System (Python/Perl-like OOP)
+
+```crisp
+# Define a class
+class Point {
+    fn new(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn move_to(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn distance() {
+        return sqrt(pow(self.x, 2) + pow(self.y, 2));
+    }
+}
+
+# Instantiate
+let p = new Point(3, 4);
+say p.x;            # → 3
+say p.y;            # → 4
+say p.distance();   # → 5
+
+p.move_to(6, 8);
+say p.distance();   # → 10
+
+# Inheritance
+class Point3D extends Point {
+    fn new(x, y, z) {
+        super(x, y);       # call parent constructor
+        self.z = z;
+    }
+
+    fn distance() {
+        let d2d = super.distance();
+        return sqrt(pow(d2d, 2) + pow(self.z, 2));
+    }
+}
+
+let p3 = new Point3D(3, 4, 12);
+say p3.distance();  # → 13
+
+# Static methods
+class Math {
+    static fn square(x) { return x * x; }
+}
+say Math.square(5);  # → 25
+
+# Auto-instantiation: Class.method() creates an object and calls method
+say Point.new(1, 2).distance();  # → 2.236...
+```
+
 ### Try/Catch/Finally — Error Handling
+
 ```crisp
 # Basic try/catch
 try {
@@ -121,6 +180,7 @@ try {
 ```
 
 ### Method Chaining on Arrays
+
 ```crisp
 let @nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
@@ -146,6 +206,15 @@ let @result = @nums
     .filter(|x| => x > 10);
 say @result;                    # → [12, 15, 18, 21, 24, 27, 30]
 
+# Functional pipeline: zip → map → filter → take
+let @a = [3, 1, 4, 1, 5, 9, 2, 6];
+let @b = [2, 7, 1, 8, 2, 8, 1, 8];
+let @pairs = @a.zip(@b)
+    .map(|pair| => pair[0] * pair[1])
+    .filter(|n| => n > 5)
+    .take(4);
+say @pairs;  # → [6, 7, 8, 10]
+
 # keys / values on hashes
 let %scores = { alice => 10, bob => 20, charlie => 30 };
 say %scores.keys();             # → [alice, bob, charlie]
@@ -153,13 +222,14 @@ say %scores.values();           # → [10, 20, 30]
 ```
 
 ### Hash Field Access
+
 ```crisp
 # Automatic string keys — no quotes needed!
 let person = { name => "John", age => 30 };
 
 # Field access with dot notation
-say person.name;    # John
-say person.age;     # 30
+say person.name;    # → John
+say person.age;     # → 30
 
 # Nested structures
 let company = {
@@ -169,8 +239,9 @@ let company = {
         country => "Czech Republic"
     }
 };
-say company.address.city;  # Prague
+say company.address.city;  # → Prague
 ```
+
 ### Control Flow Keywords
 
 ```crisp
@@ -199,6 +270,7 @@ while true {
 ```
 
 ### Arithmetic
+
 ```crisp
 let a = 10;
 let b = 20;
@@ -211,6 +283,7 @@ say b % 3;  # 2   (modulo)
 ```
 
 ### Lambda Functions
+
 ```crisp
 # Lambda with explicit return
 let square = |x| => { return x * x; };
@@ -231,6 +304,7 @@ say @doubled;  # [2, 4, 6, 8, 10]
 ```
 
 ### Named Functions
+
 ```crisp
 fn factorial(n) {
     if n <= 1 { return 1; };
@@ -289,6 +363,7 @@ for ch in "CRISP" {
 ```
 
 ### Conditional Statements
+
 ```crisp
 let age = 18;
 if age >= 18 {
@@ -337,6 +412,7 @@ match guess {
 ```
 
 ### Arrays and Hashes
+
 ```crisp
 # Arrays
 let @numbers = [1, 2, 3, 4, 5];
@@ -388,6 +464,7 @@ say @row.contains(2);       # → true
 ```
 
 ### References
+
 ```crisp
 # Create a reference
 let x = 42;
@@ -402,6 +479,7 @@ say ^r;             # → 42
 ```
 
 ### String Operations
+
 ```crisp
 let s = "hello,world,crisp";
 
@@ -443,6 +521,156 @@ if data == "" {
 }
 ```
 
+### JSON Serialization
+
+```crisp
+# to_json — serialize any CRISP value to JSON
+let data = {
+    name => "CRISP",
+    version => "0.1.5",
+    features => ["oop", "regex", "json"]
+};
+say to_json(data);
+# → {"name":"CRISP","version":"0.1.5","features":["oop","regex","json"]}
+
+# to_json_pretty — pretty-printed JSON
+say to_json_pretty(data);
+
+# from_json — parse JSON string to CRISP value
+let parsed = from_json('{"x": 10, "y": 20}');
+say parsed.x;           # → 10
+say parsed.y;           # → 20
+
+# json_valid — check if a string is valid JSON
+say json_valid('{"a": 1}');     # → true
+say json_valid('not json');     # → false
+```
+
+### Regex
+
+```crisp
+let text = "hello world, hello CRISP";
+
+# regex_match — check if pattern matches
+say regex_match(text, "CRISP");         # → true
+say regex_match(text, "^hello");        # → true
+
+# regex_replace — replace all occurrences
+say regex_replace(text, "hello", "hi"); # → hi world, hi CRISP
+
+# regex_split — split by regex
+say regex_split("a,b;c:d", "[,;:]");    # → [a, b, c, d]
+
+# regex_find_all — find all matches
+say regex_find_all(text, "\\w+");       # → [hello, world, hello, CRISP]
+
+# regex_capture — capture groups
+let caps = regex_capture("John, 30", "(\w+), (\d+)");
+say caps[1];  # → John
+say caps[2];  # → 30
+```
+
+### Networking
+
+```crisp
+# TCP client
+let sock = tcp_connect("example.com:80");
+tcp_write(sock, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
+let response = tcp_read(sock, 4096);
+tcp_close(sock);
+say response;
+
+# TCP server
+let server = tcp_listen("127.0.0.1:3000");
+let conn = tcp_accept(server);
+say conn.addr;              # → 127.0.0.1:54321
+tcp_write(conn.stream, "Hello from CRISP!\n");
+tcp_close(conn.stream);
+
+# HTTP GET shortcut
+let html = http_get("http://example.com/");
+say html;
+```
+
+### Time
+
+```crisp
+# Current timestamp
+say time();             # → 1717000000 (Unix timestamp)
+say timestamp();        # → 1717000000123 (milliseconds)
+
+# Current date/time
+say datetime();         # → 2026-05-29 14:30:00
+say datetime_utc();     # → 2026-05-29 12:30:00 UTC
+
+# Format and parse
+say strftime("%Y-%m-%d %H:%M:%S", time());
+let ts = strptime("2026-05-29 14:30:00", "%Y-%m-%d %H:%M:%S");
+
+# Sleep
+sleep(1);               # seconds
+sleep_ms(500);          # milliseconds
+```
+
+### Crypto
+
+```crisp
+# Hashing
+say md5("hello");               # → 5d41402abc4b2a76b9719d911017c592
+say sha1("hello");              # → aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d
+say sha256("hello");            # → 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c...
+say sha512("hello");
+
+# Base64
+say base64_encode("CRISP");     # → Q1JJU1A=
+say base64_decode("Q1JJU1A=");  # → CRISP
+
+# Random bytes
+say random_bytes(16);           # → (16 random bytes as hex)
+```
+
+### Process Management
+
+```crisp
+# Run a command
+system("ls", "-la");
+
+# Capture output
+let output = qx("date");
+say output;
+
+# Execute (replace current process)
+exec("vim", "hello.crisp");
+
+# Run via shell
+shell("echo hello > /tmp/test.txt");
+
+# Get process ID
+say pid();
+```
+
+### Testing
+
+```crisp
+# Assertions
+assert_eq(2 + 2, 4);
+assert_eq(sqrt(9), 3, "sqrt(9) should be 3");
+assert_ne(1, 2);
+assert_true(1 < 5);
+assert_false(0 > 10);
+
+# Assert function throws
+fn bad() { die "oops"; }
+assert_throws(bad);
+
+# Named test
+test("my_test", | | => {
+    assert_eq(pow(2, 3), 8);
+    assert_true("hello".len() == 5);
+    say "All assertions passed!";
+});
+```
+
 ### System Programming (POSIX — Unix only)
 
 POSIX is loaded on demand via `use posix;` and lives under a namespace hash:
@@ -477,39 +705,54 @@ say data;
 let input = readline("> ");
 ```
 
+---
+
 ## Project Structure
 
 ```
-crisp/
+CRISP-lang/
 ├── src/
-│   ├── main.rs          # Entry point
-│   ├── cli.rs           # CLI arguments
-│   ├── repl.rs          # REPL interface
-│   ├── lexer/           # Tokenizer
-│   ├── parser/          # AST builder
-│   ├── eval/            # Interpreter
-│   ├── value/           # Value system
-│   ├── stdlib/          # Standard library
-│   │   ├── io.rs        # Console I/O (print, say, readline, read, input)
-│   │   ├── math.rs      # Math functions
-│   │   ├── string.rs    # String operations
-│   │   ├── collections.rs # map, grep, sort
-│   │   ├── filesystem.rs  # File system operations
-│   │   └── posix/       # POSIX system calls (opt-in via use posix)
-│   └── utils/           # Utilities
-├── examples/            # Example scripts
-├── tests/              # Integration tests
-└── docs/               # Documentation
+│   ├── main.rs              # Entry point
+│   ├── cli.rs               # CLI arguments
+│   ├── repl.rs              # REPL interface
+│   ├── lexer/               # Tokenizer
+│   ├── parser/              # AST builder
+│   ├── eval/                # Interpreter
+│   ├── value/               # Value system
+│   ├── stdlib/              # Standard library
+│   │   ├── mod.rs           # Module registry
+│   │   ├── io.rs            # Console I/O
+│   │   ├── math.rs          # Math functions
+│   │   ├── collections.rs   # map, grep, sort, push, pop, etc.
+│   │   ├── json.rs          # JSON serialization
+│   │   ├── regex.rs         # Regex engine
+│   │   ├── network.rs       # TCP sockets, HTTP
+│   │   ├── time.rs          # Time functions
+│   │   ├── crypto.rs        # Hashing, base64
+│   │   ├── process.rs       # system, exec, qx, shell
+│   │   ├── testing.rs       # Unit testing
+│   │   ├── filesystem.rs    # File system operations
+│   │   └── posix/           # POSIX system calls (opt-in via use posix)
+│   └── utils/               # Utilities
+├── examples/                # Example scripts
+│   ├── hello.crisp
+│   ├── quadratic.csp
+│   ├── functional.csp
+│   └── ...
+├── tests/                   # Integration tests
+└── docs/                    # Documentation
 ```
+
+---
 
 ## Standard Library
 
 ### Console I/O
-- `print(args...)` — Output without newline (supports bare and paren syntax)
-- `say(args...)` — Output with newline (supports bare and paren syntax)
+- `print(args...)` — Output without newline
+- `say(args...)` — Output with newline
 - `warn(args...)` — Output to STDERR
-- `readline(prompt?)` → String — Read a line from stdin, strips trailing newline
-- `read(prompt?)` → Int | Float | Str — Like readline but auto-detects type
+- `readline(prompt?)` → String — Read a line from stdin
+- `read(prompt?)` → Int | Float | Str — Read line with auto-detect type
 - `input(prompt?)` → String — Python-compatible alias for readline
 
 ### Error Handling
@@ -518,41 +761,103 @@ crisp/
 - `assert(cond, msg?)` — Testing assertion
 
 ### Type Conversion
-- `int(value)` → Int | Null — Parse string to integer, returns null on failure
-- `float(value)` → Float | Null — Parse string to float, returns null on failure
+- `int(value)` → Int | Null — Parse string to integer
+- `float(value)` → Float | Null — Parse string to float
 - `type(value)` → String — Returns type name
 - `len(value)` → Int — Length of string, array, or hash
 
-### Array Operations
-- `push(arr, val)` — Append to array
-- `pop(arr)` — Remove and return last element
-- `map(arr, callback)` — Transform array
-- `filter(arr, callback)` — Filter array
-
 ### Array Methods (via `.method()` syntax)
+- `.len()` — Array length
 - `.contains(val)` — Check if array contains value
 - `.push(val)` — Append element(s), returns new length
 - `.pop()` — Remove and return last element
 - `.shift()` — Remove and return first element
 - `.unshift(val)` — Prepend element(s)
-- `.len()` — Array length
-- `.map(|x| => expr)` — Transform each element
-- `.filter(|x| => expr)` — Keep matching elements
-- `.grep(|x| => expr)` — Alias for filter
+- `.map(\|x\| => expr)` — Transform each element
+- `.filter(\|x\| => expr)` — Keep matching elements
+- `.grep(\|x\| => expr)` — Alias for filter
+- `.zip(other_array)` — Pair elements from two arrays
+- `.take(n)` — Take first n elements
 - `.join(sep)` — Join elements with separator
 - `.keys()` — Hash keys (on hashes)
 - `.values()` — Hash values (on hashes)
+
+### Standalone Array Functions
+- `map(func, arr)` — Transform array
+- `grep(func, arr)` — Filter array
+- `sort(arr, comparator?)` — Sort array
+- `push(arr, val)` — Append to array
+- `pop(arr)` — Remove last element
+- `shift(arr)` — Remove first element
+- `unshift(arr, val)` — Prepend to array
+- `join(arr, sep)` — Join array into string
 
 ### String Methods
 - `.len()` — String length
 - `.contains(substr)` — Check if string contains substring
 - `.split(delim)` — Split into array
-- `.join(sep)` — Join array into string
 
 ### Math & Random
-- `rand(max?)` → Int — Random integer 0..max-1 (max defaults to u64::MAX)
-- `sqrt()`, `pow()`, `abs()`, `min()`, `max()`
-- Constants: `PI`, `E`
+- `sqrt(x)`, `pow(base, exp)`, `abs(x)`, `min(a, b)`, `max(a, b)`
+- `rand(max?)` → Int — Random integer 0..max-1
+- Constants: `PI`, `E`, `TAU`
+
+### JSON
+- `to_json(value)` → String — Serialize to JSON
+- `to_json_pretty(value)` → String — Pretty-printed JSON
+- `from_json(string)` → Value — Parse JSON string
+- `json_valid(string)` → Bool — Check if valid JSON
+
+### Regex
+- `regex_match(text, pattern)` → Bool
+- `regex_replace(text, pattern, replacement)` → String
+- `regex_split(text, pattern)` → Array
+- `regex_find_all(text, pattern)` → Array
+- `regex_capture(text, pattern)` → Array of captures
+
+### Networking
+- `tcp_connect(addr)` → Int — Connect to TCP server, returns socket ID
+- `tcp_listen(addr)` → Int — Start TCP server, returns listener ID
+- `tcp_accept(listener_id)` → Hash — Accept connection, returns `{stream, addr}`
+- `tcp_read(socket_id, length)` → String — Read from socket
+- `tcp_write(socket_id, data)` → Int — Write to socket, returns bytes written
+- `tcp_close(socket_id)` → Bool — Close socket
+- `http_get(url)` → String — Simple HTTP GET
+
+### Time
+- `time()` → Int — Unix timestamp (seconds)
+- `timestamp()` → Int — Unix timestamp (milliseconds)
+- `datetime()` → String — Current local date/time
+- `datetime_utc()` → String — Current UTC date/time
+- `strftime(format, timestamp)` → String — Format timestamp
+- `strptime(string, format)` → Int — Parse string to timestamp
+- `sleep(seconds)` — Sleep for seconds
+- `sleep_ms(milliseconds)` — Sleep for milliseconds
+
+### Crypto
+- `md5(string)` → String — MD5 hash
+- `sha1(string)` → String — SHA-1 hash
+- `sha256(string)` → String — SHA-256 hash
+- `sha512(string)` → String — SHA-512 hash
+- `base64_encode(string)` → String — Base64 encode
+- `base64_decode(string)` → String — Base64 decode
+- `random_bytes(length)` → String — Random bytes as hex
+
+### Process Management
+- `system(cmd, args...)` → Int — Run command, return exit code
+- `exec(cmd, args...)` — Replace current process
+- `qx(cmd, args...)` → String — Run command, capture stdout
+- `shell(cmd)` → Int — Run via shell
+- `pid()` → Int — Current process ID
+
+### Testing
+- `test(name, func)` — Declare and run a named test
+- `assert_eq(a, b, msg?)` — Assert equality
+- `assert_ne(a, b, msg?)` — Assert inequality
+- `assert_true(val, msg?)` — Assert truthy
+- `assert_false(val, msg?)` — Assert falsy
+- `assert_throws(func, msg?)` — Assert function throws error
+- `test_suite()` — Run all tests
 
 ### File I/O
 - `read_file(path)` — Read entire file
@@ -570,9 +875,51 @@ crisp/
 - **Files**: `posix["open"]()`, `posix["close"]()`, `posix["read"]()`, `posix["write"]()`, `posix["lseek"]()`
 - **Environment**: `posix["getenv"]()`, `posix["setenv"]()`, `posix["environ"]()`
 
+---
+
+## Language Design
+
+See [ROADMAP.md](https://github.com/Peter-L-SVK/CRISP-lang/blob/main/ROADMAP.md) for details.
+
+### Perl-inspired Features
+- ✅ **Sigil variables** — `$scalar`, `@array`, `%hash`, `&ref`
+- ✅ **Regular expressions** — Native `=~`, `s///`, full regex module
+- ✅ **Built-in functions** — `map`, `grep`, `push`, `pop`, `system`, `qx`
+- ✅ **Method chaining** — `@arr.map(...).filter(...).take(3)`
+- ✅ **One-liners** — `crisp -e 'code'`
+- ✅ **Comments** — `#` style
+
+### Python-inspired Features
+- ✅ **OOP system** — `class`, `extends`, `super()`, `self`, constructors
+- ✅ **Type inference** — No explicit types needed
+- ✅ **Exception handling** — `try`/`catch`/`finally`
+- ✅ **Console I/O** — `input()` alias for `readline()`
+- ✅ **Rich standard library** — JSON, regex, networking, crypto, time, testing
+
+### Rust-inspired Features
+- ✅ **Memory safety** — No segfaults, no dangling pointers
+- ✅ **Lambda functions** — `|x| => x * 2`
+- ✅ **Expression-oriented** — Everything returns a value
+- ✅ **Pattern matching** — `match` with `where` guards
+
+### Unique CRISP Features
+- ✅ **Class.method() auto-instantiation** — Any method on a class creates an object
+- ✅ **Method dispatch** — `@arr.push(4)`, `"str".split(",")`, `obj.method()`
+- ✅ **Three-way comparison** — `<=>` spaceship operator
+- ✅ **Ternary operator** — `cond ? then : else`
+- ✅ **POSIX system calls** — Full Unix/Linux API via `use posix`
+- ✅ **Hash field access** — `person.name` dot notation
+- ✅ **Automatic hash keys** — `{ name => "John" }` without quoting keys
+- ✅ **References** — `\expr` creates, `^ref` dereferences
+- ✅ **Array/string slicing** — `arr[1..3]`, `str[0..4]`
+- ✅ **Range expressions** — `1..10`, `"a".."z"`
+
+---
+
 ## Development
 
 ### Building
+
 ```bash
 # Debug build
 cargo build
@@ -588,51 +935,29 @@ cargo doc --open
 ```
 
 ### Examples
+
 ```bash
 # Run hello world
 cargo run -- examples/hello.crisp
+
+# Quadratic equation solver
+cargo run -- examples/quadratic.csp
+
+# Functional pipeline demo
+cargo run -- examples/functional.csp
 
 # Run stdlib demo
 cargo run -- examples/stdlib_demo.crisp
 ```
 
-## Language Design
-
-### Perl-inspired Features
-- ✅ **Sigil variables** — `$scalar`, `@array`, `&ref`
-- ✅ **Regular expressions** — Native `=~`, `s///`
-- ✅ **Built-in functions** — `map`, `grep`, `push`, `pop`
-- ✅ **Method chaining** — `@arr.map(...).filter(...)`
-- ✅ **One-liners** — `crisp -e 'code'`
-- ✅ **Comments** — `#` style
-
-### Rust-inspired Features
-- ✅ **Memory safety** — No segfaults
-- ✅ **Lambda functions** — `|x| => x * 2`
-- ✅ **Type inference** — No explicit types needed
-- ✅ **Expression-oriented** — Everything returns a value
-
-### Unique CRISP Features
-- ✅ **Try/Catch/Finally** — `try { } catch e as err { } finally { }`
-- ✅ **throw & die** — Catchable error keywords
-- ✅ **Method dispatch** — `@arr.push(4)`, `"str".split(",")`
-- ✅ **Three-way comparison** — `<=>` spaceship operator
-- ✅ **Ternary operator** — `cond ? then : else`
-- ✅ **POSIX system calls** — Full Unix/Linux API
-- ✅ **Lambda with return** — `{ return x; }`
-- ✅ **Hash field access** — `person.name` dot notation
-- ✅ **Automatic hash keys** — `{ name => "John" }`
-- ✅ **References** — `\expr` creates, `^ref` dereferences
-- ✅ **Array/string slicing** — `arr[1..3]`, `str[0..4]`
-- ✅ **Range expressions** — `1..10`, `"a".."z"`
+---
 
 ## Contributing
 
-We welcome contributions!
-See [CONTRIBUTING](https://github.com/Peter-L-SVK/CRISP-lang/blob/main/CONTRIBUTING.md) file for details.  
+We welcome contributions! See [CONTRIBUTING.md](https://github.com/Peter-L-SVK/CRISP-lang/blob/main/CONTRIBUTING.md) for details.
 
-If you wish to express your Ideas feel free to do so in Discussions.  
-  
+If you wish to express your ideas, feel free to do so in Discussions.
+
 1. Fork the repository
 2. Create a feature branch
 3. Write code with tests
@@ -640,20 +965,23 @@ If you wish to express your Ideas feel free to do so in Discussions.
 5. Open a Pull Request
 
 ### Areas Needing Help
-- Implementing `match` pattern matching
-- Bytecode VM optimization
-- More POSIX system calls
+- Bytecode VM implementation
+- Module system (user-defined modules, import paths)
+- Stack traces for debugging (file, line, backtrace)
 - Windows support
-- GUI framework integration
+- Signal handling (SIGINT, SIGTERM)
+- Int ↔ Float autoconversion in arithmetic
+- Named arguments in function calls
+
+---
 
 ## License
 
 This project is dual-licensed under:
 
-- **MIT License** - [MIT License](LICENSE-MIT) - see the LICENSE file for details.
-- **Apache License 2.0** -  [Apache License 2.0](LICENSE-APACHE) - see the LICENSE file for details.
+- **MIT License** — see [LICENSE-MIT](LICENSE-MIT) for details
+- **Apache License 2.0** — see [LICENSE-APACHE](LICENSE-APACHE) for details
 
 ---
 
 *"Keep your code CRISP and clean"* 🦀🐪
-

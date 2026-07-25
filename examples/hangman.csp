@@ -22,9 +22,14 @@ fn stage(n) {
     return "  +---+\n  |   |\n  O   |\n /|\\  |\n / \\  |\n      |\n=========";
 }
 
-let words = ["crisp", "rust", "perl", "python", "compiler", "interpreter", "variable", "function", "closure", "syntax", "lambda", "parser", "lexer", "token", "hangman", "keyboard", "monitor", "terminal", "algorithm", "caffeine", "developer", "debugging"];
+let words = ["crisp", "rust", "perl", "python",
+    	     "compiler", "interpreter", "variable",
+	     "function", "closure", "syntax", "lambda",
+	     "parser", "lexer", "token", "hangman", "keyboard",
+	     "monitor", "terminal", "algorithm", "caffeine",
+	     "developer", "debugging"];
 
-let idx = int(rand() * 1000) % words.len();
+let idx = rand(words.len());
 let word = words[idx];
 let guessed = "";
 let wrong = 0;

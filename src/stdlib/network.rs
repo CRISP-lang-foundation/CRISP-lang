@@ -22,7 +22,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 
 pub fn register(env: &mut Environment) {
-    // tcp_connect() - pripojenie na TCP server
+    // tcp_connect() - connect to a TCP server
     env.define(
         "tcp_connect",
         Value::NativeFn(|args| {
@@ -40,7 +40,7 @@ pub fn register(env: &mut Environment) {
             let stream = TcpStream::connect(addrs.as_slice())
                 .map_err(|e| RuntimeError::IOError(e.to_string()))?;
 
-            // Uložíme stream do hash mapy a vrátime ID
+            // Store the stream in a hash map and return its ID
             let id = store_stream(stream);
             Ok(Value::Int(id as i64))
         }),
@@ -65,7 +65,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // tcp_accept() - prijatie spojenia
+    // tcp_accept() - accept a connection
     env.define(
         "tcp_accept",
         Value::NativeFn(|args| {
@@ -94,7 +94,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // tcp_read() - čítanie zo socketu
+    // tcp_read() - read from a socket
     env.define(
         "tcp_read",
         Value::NativeFn(|args| {
@@ -122,7 +122,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // tcp_write() - zápis do socketu
+    // tcp_write() - write to a socket
     env.define(
         "tcp_write",
         Value::NativeFn(|args| {
@@ -150,7 +150,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // tcp_close() - zatvorenie socketu
+    // tcp_close() - close a socket
     env.define(
         "tcp_close",
         Value::NativeFn(|args| {
@@ -167,7 +167,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // http_get() - jednoduchý HTTP GET
+    // http_get() - simple HTTP GET
     env.define(
         "http_get",
         Value::NativeFn(|args| {
@@ -177,7 +177,7 @@ pub fn register(env: &mut Environment) {
 
             let url = args[0].as_str();
 
-            // Jednoduchá implementácia - očakávame http://host:port/path
+            // Simple implementation - expects http://host:port/path
             let parts: Vec<&str> = url.split("://").collect();
             if parts.len() != 2 || parts[0] != "http" {
                 return Err(RuntimeError::ArgumentError("Invalid HTTP URL".into()));

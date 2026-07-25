@@ -1,0 +1,68 @@
+# Quadratic Equation Solver
+
+say "**********************************";
+say "Quadratic Equation Solver";
+say "**********************************";
+say "";
+
+say "Enter coefficient a:";
+let a_input = readline();
+let a = float(a_input);
+
+if a == null {
+    say "Invalid value!";
+    exit();
+}
+
+say "Enter coefficient b:";
+let b_input = readline();
+let b = float(b_input);
+
+if b == null {
+    say "Invalid value!";
+    exit();
+}
+
+say "Enter coefficient c:";
+let c_input = readline();
+let c = float(c_input);
+
+if c == null {
+    say "Invalid value!";
+    exit();
+}
+
+say "Equation loaded: " + a + "x^2 + (" + b + "x) + (" + c + ") = 0";
+say "";
+
+if a == 0.0 {
+    if b == 0.0 {
+        if c == 0.0 {
+            say "The equation has infinitely many solutions!";
+            exit();
+        }
+        say "The equation has no solution!";
+        exit();
+    }
+    let x = (-c) / b;
+    say "The equation is linear and has one solution: x = " + x;
+    exit();
+}
+
+let d = pow(b, 2.0) - 4.0 * a * c;
+
+if d > 0.0 {
+    let x1 = (-b + sqrt(d)) / (2.0 * a);
+    let x2 = (-b - sqrt(d)) / (2.0 * a);
+    say "The quadratic equation has roots x1 = " + x1 + " and x2 = " + x2;
+} else {
+    if d == 0.0 {
+        let xd = (-b) / (2.0 * a);
+        say "The solution is a double root x1,2 = " + xd;
+    } else {
+        let d_abs = -d;
+        let xr = (-b) / (2.0 * a);
+        let xi = sqrt(d_abs) / (2.0 * a);
+        say "The roots lie in the complex plane: xr = " + xr + ", xi = +/- " + xi;
+    }
+}

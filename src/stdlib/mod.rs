@@ -19,18 +19,18 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-mod collections;
-mod crypto;
-mod filesystem;
-mod io;
-mod json;
-mod math;
-mod network;
-mod process;
-mod regex;
-mod string;
-mod testing;
-mod time;
+pub mod collections;
+pub mod crypto;
+pub mod filesystem;
+pub mod io;
+pub mod json;
+pub mod math;
+pub mod network;
+pub mod process;
+pub mod regex;
+pub mod string;
+pub mod testing;
+pub mod time;
 
 #[cfg(unix)]
 pub mod posix;
@@ -59,16 +59,17 @@ pub fn register_all(env: &mut Environment) {
     register_errors(env);
 
     // ── Modules ─────────────────────────────────────────────────────
+    io::register(env);
     math::register(env);
-    filesystem::register(env);
     collections::register(env);
-    string::register(env);
-    time::register(env);
-    process::register(env);
-    network::register(env);
     json::register(env);
+    regex::register(env);
+    network::register(env);
+    time::register(env);
     crypto::register(env);
+    process::register(env);
     testing::register(env);
+    filesystem::register(env);
 
     // ── Random ──────────────────────────────────────────────────────
     env.define(
@@ -190,25 +191,27 @@ fn register_builtins(env: &mut Environment) {
 
     // type() — returns the type of a value
     env.define(
-        "type",
-        Value::NativeFn(|args| {
+	"type",
+	Value::NativeFn(|args| {
             if args.is_empty() {
-                return Err(RuntimeError::ArgumentError("type needs a value".into()));
+		return Err(RuntimeError::ArgumentError("type needs a value".into()));
             }
             let type_name = match &args[0] {
-                Value::Null => "null",
-                Value::Bool(_) => "bool",
-                Value::Int(_) => "int",
-                Value::Float(_) => "float",
-                Value::Str(_) => "string",
-                Value::Array(_) => "array",
-                Value::Hash(_) => "hash",
-                Value::Ref(_) => "ref",
-                Value::NativeFn(_) => "function",
-                Value::UserFn { .. } => "function",
+		Value::Null => "null",
+		Value::Bool(_) => "bool",
+		Value::Int(_) => "int",
+		Value::Float(_) => "float",
+		Value::Str(_) => "string",
+		Value::Array(_) => "array",
+		Value::Hash(_) => "hash",
+		Value::Ref(_) => "ref",
+		Value::NativeFn(_) => "function",
+		Value::UserFn { .. } => "function",
+		Value::Class { .. } => "class",
+		Value::Object { .. } => "object",
             };
             Ok(Value::Str(Rc::new(type_name.to_string())))
-        }),
+	}),
     );
 
     // int(value) → Int or Null

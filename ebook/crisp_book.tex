@@ -49,9 +49,9 @@
 
 % --- Listing Setup ---
 \lstdefinelanguage{CRISP}{
-    morekeywords={let,const,fn,if,else,while,for,return,match,use,print,say,die,warn,assert,where,in},
-    morekeywords=[2]{map,grep,sort,reduce,sqrt,pow,abs,min,max,rand,length,trim,split,join,to_upper,to_lower},
-    morekeywords=[3]{fork,execvp,waitpid,spawn,getpid,getppid,kill,alarm,getuid,geteuid,getgid,getegid,open,close,read,write,lseek,getenv,setenv,environ},
+    morekeywords={let,const,fn,if,else,while,for,return,match,use,print,say,die,warn,assert,where,in,class,extends,static,self,super,new,try,catch,finally,throw,break,continue,true,false,null},
+    morekeywords=[2]{map,grep,sort,reduce,sqrt,pow,abs,min,max,rand,length,trim,split,join,to_upper,to_lower,contains,keys,values,len,push,pop,shift,unshift,filter,take,zip},
+    morekeywords=[3]{fork,execvp,waitpid,spawn,getpid,getppid,kill,alarm,getuid,geteuid,getgid,getegid,open,close,read,write,lseek,getenv,setenv,environ,readline,input,read_file,write_file,file_exists,type,int,float,exit,to_json,from_json,json_valid,base64_encode,base64_decode,md5,sha1,sha256,sha512,random_bytes,time,timestamp,datetime,datetime_utc,strftime,strptime,regex_match,regex_replace,regex_split,regex_find_all,regex_capture,system,qx,pid,assert_eq,assert_ne,assert_true,assert_false,assert_throws},
     sensitive=true,
     morecomment=[l]{\#},
     morestring=[b]",
@@ -100,6 +100,7 @@
 \renewcommand{\cftsecfont}{\color{darkpurple}\bfseries}
 \renewcommand{\cftsubsecfont}{\color{mediumpurple}}
 \renewcommand{\cftsecpagefont}{\color{darkpurple}}
+\setlength{\cftbeforesecskip}{4pt}
 \renewcommand{\cftsubsecpagefont}{\color{mediumpurple}}
 
 % --- Title Page ---
@@ -160,7 +161,7 @@
 % Version badge
 \begin{tcolorbox}[colback=darkpurple, colframe=darkpurple, width=4cm, center, sharp corners, boxrule=0pt]
     \centering
-    {\large\bfseries\color{codegold}Version 0.1.3}
+    {\large\bfseries\color{codegold}Version 0.1.5}
 \end{tcolorbox}
 
 \vfill
@@ -195,7 +196,7 @@
 \end{enumerate}
 \end{tcolorbox}
 
-\clearpage
+\needspace{8\baselineskip}
 
 % --- 1. Introduction ---
 \section{Introduction}
@@ -211,6 +212,7 @@ The landscape of scripting languages is dominated by a trade-off between express
     \item \textbf{System access:} Full POSIX system calls via opt-in \texttt{use posix;} module
     \item \textbf{Modern error handling:} \texttt{try}/\texttt{catch}/\texttt{finally} with \texttt{throw}/\texttt{die} keywords
     \item \textbf{Pattern matching:} Rust-style \texttt{match} with \texttt{where} guards
+    \item \textbf{Object-oriented programming:} Classes, constructors, inheritance, static methods, and \texttt{super} calls
 \end{itemize}
 
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Definition: CRISP}}, fonttitle=\bfseries, sharp corners]
@@ -224,11 +226,210 @@ The landscape of scripting languages is dominated by a trade-off between express
     \item Console I/O with type-safe input functions and proper flush semantics
     \item Loop control flow with \texttt{break} and \texttt{continue}
     \item Variable assignment without redeclaration (\texttt{x = x + 1})
+    \item Classes with constructors, inheritance, and static methods
 \end{itemize}
 \end{tcolorbox}
 
+\needspace{10\baselineskip}
 
-% --- 2. Language Design ---
+% --- 2. A First Program ---
+\section{A First Program}
+
+The only way to learn a new programming language is by writing programs in it. The first program to write is the same for all languages:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Hello, World!}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+say "Hello, World!";
+\end{lstlisting}
+\end{tcolorbox}
+
+Save this in a file called \texttt{hello.csp} and run it:
+
+\begin{lstlisting}[language=bash]
+$ crisp hello.csp
+Hello, World!
+\end{lstlisting}
+
+This program does two things: it calls the built-in function \texttt{say}, which prints its argument followed by a newline, and it passes a string literal \texttt{"Hello, World!"} as that argument. The semicolon terminates the statement, though CRISP is forgiving—semicolons are optional in many positions.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: The First Step}}, fonttitle=\bfseries, sharp corners]
+Every CRISP program is a sequence of statements. A statement can be a variable declaration, a function call, a control-flow construct, or an expression. The simplest useful program is one that produces output—and that's exactly what \texttt{say} does. As you progress through this book, you'll build on this foundation: from output, to variables, to computation, to control flow, and finally to complex programs that manipulate data, talk to the operating system, and solve real problems.
+
+\textit{--- With apologies to Brian Kernighan and Dennis Ritchie, whose "hello, world" started it all.}
+\end{tcolorbox}
+
+\subsection{A Temperature Converter}
+
+Let's write something more useful. We'll convert Fahrenheit to Celsius—a classic example from the C programming tradition.
+
+The formula is:
+
+\[
+C = \frac{5}{9} \times (F - 32)
+\]
+
+Here is a complete CRISP program that reads a Fahrenheit temperature and prints the Celsius equivalent:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Fahrenheit to Celsius Converter (fahrenheit\_to\_celsius.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# fahrenheit_to_celsius.csp — Convert Fahrenheit to Celsius
+
+say "Fahrenheit to Celsius Converter";
+say "================================";
+say "";
+
+say "Enter temperature in Fahrenheit:";
+let f = float(readline());
+
+if f == null {
+    say "That's not a valid number!";
+    exit(1);
+}
+
+let c = (5.0 / 9.0) * (f - 32.0);
+
+say f + "°F = " + c + "°C";
+\end{lstlisting}
+\end{tcolorbox}
+
+Let's walk through this program line by line:
+
+\begin{itemize}
+    \item Lines starting with \texttt{\#} are comments—they're ignored by CRISP but help humans understand the code.
+    \item \texttt{say} prints to the console with a newline; empty \texttt{say ""} produces a blank line.
+    \item \texttt{readline()} reads a line of text from the user. The program waits for the user to type something and press Enter.
+    \item \texttt{float(...)} converts the string to a floating-point number. If the conversion fails (the user typed ``hello'' instead of ``72''), it returns \texttt{null}.
+    \item \texttt{if f == null} checks for invalid input and exits with an error code if something went wrong.
+    \item The formula \texttt{(5.0 / 9.0) * (f - 32.0)} computes Celsius. Note the use of \texttt{5.0} and \texttt{9.0}—using integers \texttt{5 / 9} would produce 0 (integer division), but floats give the correct 0.555...
+    \item Finally, the result is printed with both the original and converted values.
+\end{itemize}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Programmer's Note: Integer vs. Float Division}}, fonttitle=\bfseries, sharp corners]
+CRISP's division operator \texttt{/} always produces a \textbf{Float} result, even when both operands are integers. So \texttt{5 / 9} returns \texttt{0.555...} (Float), not \texttt{0} (truncated integer). This differs from C and Python 2, where integer division truncates. It matches the behavior of Python 3 and modern Perl.
+
+If you want integer division, use the modulo operator \texttt{\%} and subtract: \texttt{(a - a \% b) / b}.
+\end{tcolorbox}
+
+\subsection{A Temperature Table}
+
+Our first program converts one temperature. A more useful version would print a table. Let's extend it to compute Fahrenheit, Celsius, and Kelvin for a range of values:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Temperature Table (temperature\_table.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# temperature_table.csp — Print a Fahrenheit-Celsius-Kelvin table
+
+say "Fahrenheit  Celsius  Kelvin";
+say "----------  -------  ------";
+
+let lower = 0;
+let upper = 300;
+let step = 20;
+
+let f = lower;
+while f <= upper {
+    let c = (5.0 / 9.0) * (f - 32.0);
+    let k = c + 273.15;
+
+    # Format each row with aligned columns
+    say f + "          " + c + "     " + k;
+
+    f = f + step;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+This program introduces several new concepts:
+
+\begin{itemize}
+    \item \textbf{Variables:} \texttt{lower}, \texttt{upper}, \texttt{step}, \texttt{f}, \texttt{c}, \texttt{k} store values that change during execution.
+    \item \textbf{The while loop:} \texttt{while f <= upper \{ ... \}} repeats the body as long as the condition is true.
+    \item \textbf{Reassignment:} \texttt{f = f + step} increments \texttt{f} by 20 each iteration. This is how loops advance—without it, the loop would run forever.
+\end{itemize}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: Loop Design}}, fonttitle=\bfseries, sharp corners]
+Every loop has three parts: \textbf{initialization} (setting \texttt{lower}, \texttt{upper}, \texttt{step} before the loop), \textbf{condition} (\texttt{f <= upper}), and \textbf{increment} (\texttt{f = f + step}). Forgetting the increment is the most common loop bug—the program will run forever because the condition never becomes false. CRISP doesn't stop you; it will happily loop until you kill the process with Ctrl+C.
+
+A safer pattern for numeric iteration is the \texttt{for} loop with ranges, which handles all three parts automatically: \texttt{for f in 0..301 by 20 \{ ... \}}.
+\end{tcolorbox}
+
+\subsection{An Interactive Temperature Converter}
+
+Let's combine input, computation, and control flow into a full interactive program that converts between Fahrenheit, Celsius, and Kelvin:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Interactive Temperature Converter (temp\_convert.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# temp_convert.csp — Interactive F/C/K converter
+
+say "Temperature Converter";
+say "=====================";
+say "Type 'quit' to exit.";
+say "";
+
+while true {
+    say "Enter temperature (e.g., 100F, 37C, 300K):";
+    let input = readline("> ");
+
+    if input == "quit" || input == "exit" {
+        say "Goodbye!";
+        break;
+    }
+
+    if input == "" { continue; }
+
+    # Extract the scale from the last character
+    let scale = input[input.len() - 1];
+    let value_str = input[0..input.len() - 1];
+    let value = float(value_str);
+
+    if value == null {
+        say "Invalid number. Try again.";
+        continue;
+    }
+
+    if scale == "F" || scale == "f" {
+        let c = (5.0 / 9.0) * (value - 32.0);
+        let k = c + 273.15;
+        say value + "°F = " + c + "°C = " + k + " K";
+    } else if scale == "C" || scale == "c" {
+        let f = (9.0 / 5.0) * value + 32.0;
+        let k = value + 273.15;
+        say value + "°C = " + f + "°F = " + k + " K";
+    } else if scale == "K" || scale == "k" {
+        let c = value - 273.15;
+        let f = (9.0 / 5.0) * c + 32.0;
+        say value + " K = " + c + "°C = " + f + "°F";
+    } else {
+        say "Unknown scale '" + scale + "'. Use F, C, or K.";
+    }
+
+    say "";
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+This program demonstrates CRISP's string slicing (\texttt{input[0..input.len() - 1]} extracts everything except the last character), the \texttt{break} statement (exits the infinite loop), \texttt{continue} (skips to the next iteration), and multi-way branching with \texttt{if/else if/else}.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{What We Learned}}, fonttitle=\bfseries, sharp corners]
+From three temperature programs, we've covered:
+
+\begin{itemize}
+    \item \textbf{Output:} \texttt{say} prints to the console
+    \item \textbf{Input:} \texttt{readline()} reads user input; \texttt{float()} converts strings to numbers
+    \item \textbf{Variables:} \texttt{let} declares them, \texttt{=} reassigns them
+    \item \textbf{Arithmetic:} \texttt{+}, \texttt{-}, \texttt{*}, \texttt{/} with natural precedence
+    \item \textbf{Conditionals:} \texttt{if/else if/else} for decision-making
+    \item \textbf{Loops:} \texttt{while} for repetition; \texttt{break} to exit; \texttt{continue} to skip
+    \item \textbf{String slicing:} \texttt{s[0..n]} extracts substrings
+    \item \textbf{Error handling:} checking for \texttt{null} after conversion
+    \item \textbf{Program structure:} comments, whitespace, and logical flow
+\end{itemize}
+
+These are the fundamentals of programming in any language. Everything else—functions, arrays, hashes, classes, regex—builds on this foundation.
+\end{tcolorbox}
+
+\needspace{8\baselineskip}
+
+% --- 3. Language Design ---
 \section{Getting Started}
 
 \subsection{Installation and Running}
@@ -285,7 +486,7 @@ The interactive REPL supports:
 \begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{REPL Session}}, fonttitle=\bfseries, sharp corners]
 \begin{lstlisting}
 $ crisp
-> CRISP v0.1.0 - 2026
+> CRISP v0.1.5 - 2026
 Creative Rust Implemented Scripting Paradigm
 Perl-inspired . Rust-powered
 
@@ -298,7 +499,8 @@ Hello, CRISP!
 \end{lstlisting}
 \end{tcolorbox}
 
-% --- 3. Core Features ---
+
+% --- 4. Variables and Types ---
 \section{Variables and Types}
 
 \subsection{Value Types}
@@ -322,6 +524,8 @@ Float & \texttt{Value::Float(f64)} & \texttt{3.14}, \texttt{-0.5} & 64-bit float
 Str & \texttt{Value::Str(Rc<String>)} & \texttt{"hello"} & UTF-8 string, reference-counted \\
 Array & \texttt{Value::Array(Rc<RefCell<Vec>>)} & \texttt{[1, 2, 3]} & Dynamic, mutable array \\
 Hash & \texttt{Value::Hash(Rc<RefCell<HashMap>>)} & \texttt{\{name => "John"\}} & String-keyed dictionary \\
+Object & \texttt{Value::Object} & \texttt{new Point(3, 4)} & OOP object with fields and methods \\
+Class & \texttt{Value::Class} & \texttt{class Point \{ ... \}} & Class definition (stored value) \\
 Ref & \texttt{Value::Ref(Rc<RefCell<Value>>)} & \texttt{\textbackslash expr} & Shared mutable reference \\
 Function & \texttt{Value::NativeFn} or \texttt{Value::UserFn} & \texttt{fn(x) \{ ... \}} & Callable functions \\
 \bottomrule
@@ -344,7 +548,7 @@ count = count + 1;
 name = "New Name";
 
 # Assignment to undeclared variable is an error
-x = 5;  # Error: Undefined variable: x
+# x = 5;  # Error: Undefined variable: x
 
 # Constants
 const PI = 3.14159;
@@ -420,7 +624,9 @@ let len2 = len([1, 2, 3]);     # 3
 let len3 = len({ a => 1, b => 2 });  # 2
 \end{lstlisting}
 \end{tcolorbox}
-\clearpage
+
+\needspace{8\baselineskip}
+
 % --- References and Pointer Semantics ---
 \section{References and Pointer Semantics}
 
@@ -667,7 +873,9 @@ Python & Implicit & Implicit & Runtime (GC) & Everything is a reference \\
 
 CRISP's model sits between Perl (explicit \textbackslash/\$ deref, reference-counted) and Rust (safe interior mutability pattern), with the explicitness of C pointers but the safety of runtime borrow checking.
 
-% --- 4. Binary Expressions and Operators ---
+\needspace{10\baselineskip}
+
+% --- Binary Expressions and Operators ---
 \section{Binary Expressions and Operators}
 
 CRISP provides a rich set of binary operators organized by precedence. The parser uses a Pratt parsing algorithm with defined binding powers for each operator, eliminating ambiguity in complex expressions.
@@ -967,7 +1175,9 @@ CRISP uses a Pratt (top-down operator precedence) parser for binary expressions.
 This approach eliminates the need for explicit precedence tables in the grammar — precedence is encoded directly in the numeric binding powers.
 \end{tcolorbox}
 
-% --- 5. Control Flow ---
+\needspace{10\baselineskip}
+
+% --- Control Flow ---
 \section{Control Flow}
 
 \subsection{Conditional Statements}
@@ -1157,7 +1367,9 @@ fn do_nothing() {
 \texttt{return}, \texttt{break}, and \texttt{continue} are implemented as sentinel errors (\texttt{RuntimeError::ReturnSignal}, \texttt{BreakSignal}, \texttt{ContinueSignal}) that unwind through the call stack. This ensures they propagate correctly through nested structures like \texttt{if}, \texttt{match}, \texttt{try/catch}, and \texttt{for} loops. Using \texttt{break} or \texttt{continue} outside a loop produces a runtime error.
 \end{tcolorbox}
 
-% --- 6. Functions and Closures ---
+\needspace{10\baselineskip}
+
+% --- Functions and Closures ---
 \section{Functions and Closures}
 
 \subsection{Named Functions}
@@ -1346,90 +1558,200 @@ say triple(10);  # 30
 \end{lstlisting}
 \end{tcolorbox}
 
-\subsection{Error Handling in Functions}
+\needspace{8\baselineskip}
 
-Functions integrate with CRISP's error handling system. Unhandled \texttt{break} or \texttt{continue} inside a function body produce a runtime error:
+% --- String Processing ---
+\section{String Processing}
 
-\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Function Error Handling}}, fonttitle=\bfseries, sharp corners]
+CRISP inherits Perl's strength in text manipulation. Strings are first-class values with rich built-in methods and a flexible set of operators. This section presents four classic string-processing programs that demonstrate CRISP's capabilities.
+
+\subsection{String Reversal}
+
+Reversing a string is the ``hello world'' of string algorithms. Here are three approaches, from manual to idiomatic:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{String Reversal (reverse\_string.csp)}}, fonttitle=\bfseries, sharp corners]
 \begin{lstlisting}
-# Errors propagate through function calls
-fn div(a, b) {
-    if b == 0 {
-        die("Division by zero");
+# reverse_string.csp — Three ways to reverse a string
+
+fn reverse_iterative(s) {
+    let result = "";
+    let i = s.len() - 1;
+    while i >= 0 {
+        result = result + s[i];
+        i = i - 1;
     }
-    return a / b;
+    return result;
 }
 
-try {
-    say div(10, 0);
-} catch e {
-    say "Caught: ", e;
-}
-# Output: Caught: Division by zero
-
-# break and continue are errors outside loops
-fn broken() {
-    break;  # RuntimeError: break outside loop
-}
-
-# try/catch inside functions
-fn safe_read(path) {
-    try {
-        return read_file(path);
-    } catch {
-        return null;
+fn reverse_for(s) {
+    let result = "";
+    for ch in s {
+        result = ch + result;  # prepend each character
     }
+    return result;
 }
 
-let data = safe_read("missing.txt");
-if data == null {
-    say "File not found, using default";
+fn reverse_split(s) {
+    # split into characters, reverse array, join back
+    return s.split("").reverse().join("");
+}
+
+say reverse_iterative("CRISP");   # PSIRC
+say reverse_for("hello");         # olleh
+say reverse_split("world");       # dlrow
+\end{lstlisting}
+\end{tcolorbox}
+
+The iterative version walks backward through the string index by index. The \texttt{for}-loop version takes advantage of CRISP's character iteration: each character is prepended to the result, naturally reversing the order. The split-reverse-join pipeline is the most idiomatic—it composes three operations into a single expression.
+
+\subsection{Palindrome Checker}
+
+A palindrome reads the same forward and backward. This program normalizes input (strips spaces, ignores case and punctuation) before checking:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Palindrome Checker (palindrome.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# palindrome.csp — Check if a string is a palindrome
+
+fn is_palindrome(s) {
+    # Normalize: lowercase, strip non-alphanumeric characters
+    let cleaned = "";
+    for ch in s {
+        let lower = ch.to_lower();
+        if lower =~ /[a-z0-9]/ {
+            cleaned = cleaned + lower;
+        }
+    }
+
+    # Compare with reversed version
+    let len = cleaned.len();
+    let i = 0;
+    while i < len / 2 {
+        if cleaned[i] != cleaned[len - 1 - i] {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+# Test cases
+let tests = [
+    "racecar",
+    "A man a plan a canal Panama",
+    "hello",
+    "Madam, I'm Adam",
+    "12321",
+    "not a palindrome"
+];
+
+for test in tests {
+    let result = is_palindrome(test) ? "YES" : "NO";
+    say test + " → " + result;
 }
 \end{lstlisting}
 \end{tcolorbox}
 
-\subsection{Method Calls on Values}
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: String Normalization}}, fonttitle=\bfseries, sharp corners]
+The palindrome checker illustrates a common text-processing pattern: \textbf{normalize, then analyze}. Real-world strings are messy—they have spaces, punctuation, mixed case. Rather than making the comparison logic handle all these variations, we first transform the input into a canonical form (lowercase alphanumeric), then apply the simple algorithm.
 
-Values with hash type support method dispatch via the dot syntax. When a method is called, the value becomes the first argument:
+This pattern—sanitize input, then operate—appears everywhere in text processing: search engines strip stop words before indexing, compilers tokenize before parsing, spam filters normalize before classifying. Get comfortable with it; you'll use it often.
+\end{tcolorbox}
 
-\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Method Calls}}, fonttitle=\bfseries, sharp corners]
+\subsection{Word Counter}
+
+This program counts words, lines, and characters—the classic Unix \texttt{wc} utility, in CRISP:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Word Counter (word\_count.csp)}}, fonttitle=\bfseries, sharp corners]
 \begin{lstlisting}
-# Array methods
-let @arr = [1, 2, 3];
-@arr.push(4);                    # [1, 2, 3, 4]
-say @arr.pop();                  # 4
-say @arr.len();                  # 3
-say @arr.contains(2);            # true
+# word_count.csp — Count words, lines, and characters
 
-# String methods
-say "hello world".len();         # 11
-say "a,b,c".split(",");          # ["a", "b", "c"]
-say "hello".contains("ell");     # true
+fn wc(text) {
+    let chars = text.len();
 
-# Hash methods
-let %h = { a => 1, b => 2, c => 3 };
-say %h.keys();                   # ["a", "b", "c"]
-say %h.values();                 # [1, 2, 3]
+    # Count lines by counting newlines
+    let lines = 1;  # at least one line
+    for ch in text {
+        if ch == "\n" {
+            lines = lines + 1;
+        }
+    }
 
-# Chaining methods
-let result = [3, 1, 2]
-    .push(4)
-    .filter(|x| => x % 2 == 0);
-say result;                      # [2, 4]
+    # Count words: split on whitespace, filter empties
+    let raw_words = text.split(" ");
+    let words = 0;
+    for w in raw_words {
+        if w != "" { words = words + 1; }
+    }
+
+    return { lines => lines, words => words, chars => chars };
+}
+
+# Test with a sample paragraph
+let sample = "CRISP combines Perl expressiveness\n" +
+             "with Rust safety.\n" +
+             "It's a modern scripting language.\n";
+
+let stats = wc(sample);
+say "Lines: " + stats.lines;
+say "Words: " + stats.words;
+say "Chars: " + stats.chars;
 \end{lstlisting}
-
 \end{tcolorbox}
 
-\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Function Environment}}, fonttitle=\bfseries, sharp corners]
-Each function (named or lambda) captures a reference-counted pointer (\texttt{Rc<RefCell<Environment>>}) to its definition environment. At call time, a new child environment is created chained to this captured parent. This provides two guarantees:
-\begin{itemize}
-    \item \textbf{Lexical scoping:} Functions see the variables that existed when they were defined
-    \item \textbf{Isolation:} Each call gets a fresh local scope that doesn't leak between invocations
-\end{itemize}
-The self-reference mechanism (the function's own name bound inside its body) enables recursion without requiring global name resolution at each recursive call.
+\subsection{Character Frequency Analyzer}
+
+This program counts how often each character appears in a string—useful for cryptanalysis, text statistics, and data exploration:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Character Frequency (char\_freq.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# char_freq.csp — Character frequency analysis
+
+fn char_frequency(text) {
+    let freq = {};
+
+    for ch in text {
+        if ch == " " || ch == "\n" || ch == "\t" {
+            continue;  # skip whitespace
+        }
+
+        # Initialize count if first time seeing this char
+        if !freq.contains(ch) {
+            freq[ch] = 0;
+        }
+        freq[ch] = freq[ch] + 1;
+    }
+
+    return freq;
+}
+
+fn print_freq_table(freq) {
+    say "Char | Count | Bar";
+    say "-----+-------+------------------";
+
+    for ch in freq.keys() {
+        let count = freq[ch];
+        let bar = "█" x count;  # repeat block char
+        say "  " + ch + "   | " + count + "     | " + bar;
+    }
+}
+
+let text = "The quick brown fox jumps over the lazy dog";
+let freq = char_frequency(text);
+print_freq_table(freq);
+\end{lstlisting}
 \end{tcolorbox}
-\clearpage
-% --- 7. Error Handling ---
+
+The frequency analyzer builds a hash (\texttt{freq}) mapping each character to its count. The \texttt{x} operator (string repetition) creates a simple horizontal bar chart. This is a pattern you'll see throughout CRISP: use a hash for counting, an array for ordering, and lambdas for transformation.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Why String Processing Matters}}, fonttitle=\bfseries, sharp corners]
+Text is universal. Log files, configuration files, CSV data, HTML pages, JSON APIs, source code—everything is text. The languages that excel at text processing (Perl, AWK, sed) became the backbone of system administration and data wrangling for decades. CRISP inherits this tradition: strings are not an afterthought but a central design element.
+
+The four programs in this section—reversal, palindrome checking, word counting, and frequency analysis—are not just exercises. They're the building blocks of real-world text processing: validation, normalization, counting, and analysis. Master them, and you'll find that most text problems reduce to combinations of these patterns.
+\end{tcolorbox}
+
+\needspace{10\baselineskip}
+
+% --- Error Handling ---
 \section{Error Handling}
 
 CRISP provides a modern error handling system with \texttt{try}/\texttt{catch}/\texttt{finally} blocks, catchable \texttt{throw} and \texttt{die} keywords, and proper propagation of control-flow signals through error boundaries.
@@ -1495,7 +1817,7 @@ try {
 # Output: inner: inner error
 \end{lstlisting}
 \end{tcolorbox}
-\clearpage
+
 \subsection{Throw and Die}
 
 Both \texttt{throw} and \texttt{die} produce catchable \texttt{UserError} values. They are interchangeable:
@@ -1631,7 +1953,9 @@ CRISP provides two exit mechanisms:
 The \texttt{ExitSignal} uses the same sentinel-error mechanism as \texttt{return}/\texttt{break}/\texttt{continue} to unwind the call stack, ensuring \texttt{finally} blocks execute before the interpreter propagates the signal to the top level and calls \texttt{std::process::exit}.
 \end{tcolorbox}
 
-% --- 8. Pattern Matching ---
+\needspace{10\baselineskip}
+
+% --- Pattern Matching ---
 \section{Pattern Matching}
 
 CRISP supports Rust-style pattern matching with the \texttt{match} expression. Patterns can be literal values, variable bindings, or wildcards, with optional \texttt{where} guards.
@@ -1712,7 +2036,7 @@ match readline("Enter: ") {
 }
 \end{lstlisting}
 \end{tcolorbox}
-\clearpage
+
 \subsection{Where Guards}
 
 \texttt{where} guards add conditions to pattern arms. The guard expression is evaluated after the pattern matches, and the arm only fires if the guard is true:
@@ -1757,7 +2081,6 @@ match x {
 \end{lstlisting}
 \end{tcolorbox}
 
-\needspace{5\baselineskip}
 \subsection{Multi-Statement Arm Bodies}
 
 Each arm body can contain multiple statements. The match expression returns the value of the last statement in the matched arm:
@@ -1780,7 +2103,6 @@ match value {
 \end{lstlisting}
 \end{tcolorbox}
 
-\needspace{5\baselineskip}
 \subsection{Break and Continue in Match Arms}
 
 \texttt{break} and \texttt{continue} propagate correctly from inside \texttt{match} arms when the \texttt{match} is inside a loop:
@@ -1815,7 +2137,9 @@ for i in 0..5 {
 For variable-binding patterns with guards, the variable is bound in a temporary scope that includes the guard expression and the arm body. This ensures guard expressions can reference the bound variable without leaking into the outer scope.
 \end{tcolorbox}
 
-% --- 9. Regular Expressions ---
+\needspace{10\baselineskip}
+
+% --- Regular Expressions ---
 \section{Regular Expressions}
 
 CRISP includes native Perl-style regular expression support via the Rust \texttt{regex} crate. The \texttt{=~} operator tests for a match, and the \texttt{s///} syntax performs substitution.
@@ -1850,7 +2174,6 @@ if text =~ /pattern/ {
 \end{lstlisting}
 \end{tcolorbox}
 
-\needspace{5\baselineskip}
 \subsection{Global Match}
 
 With the \texttt{g} flag, \texttt{=~} returns an array of all matches:
@@ -1891,25 +2214,6 @@ say modified;  # The quick red fox
 \end{lstlisting}
 \end{tcolorbox}
 
-\subsection{Regex in Expressions}
-
-The \texttt{Expr::Match} and \texttt{Expr::Substitute} AST nodes can be used as part of larger expressions:
-
-\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Regex in Expressions}}, fonttitle=\bfseries, sharp corners]
-\begin{lstlisting}
-# Match as expression
-let has_fox = text =~ /fox/;
-if has_fox {
-    say "Contains fox";
-}
-
-# Combine with logical operators
-if text =~ /quick/ && text =~ /fox/ {
-    say "Contains both quick and fox";
-}
-\end{lstlisting}
-\end{tcolorbox}
-
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Regex Implementation}}, fonttitle=\bfseries, sharp corners]
 Regular expressions in CRISP are powered by the Rust \texttt{regex} crate, which provides:
 \begin{itemize}
@@ -1919,10 +2223,181 @@ Regular expressions in CRISP are powered by the Rust \texttt{regex} crate, which
     \item \textbf{Safety:} No catastrophic backtracking — the regex engine uses finite automata
 \end{itemize}
 
-The regex is not a first-class type — patterns are passed as strings and compiled at the point of use. Capture groups (\texttt{\$1}, \texttt{\$2}) are not currently implemented but are planned for a future release.
+The regex is not a first-class type — patterns are passed as strings and compiled at the point of use. Capture groups (\texttt{\$1}, \texttt{\$2}) are not currently implemented as automatic variables but are available through the \texttt{regex\_capture()} function in the standard library.
 \end{tcolorbox}
 
-% --- 10. Modules ---
+\needspace{10\baselineskip}
+
+% --- Object-Oriented Programming ---
+\section{Object-Oriented Programming}
+
+CRISP v0.1.5 introduces Python/Perl-style object-oriented programming with classes, constructors, inheritance, and static methods. OOP in CRISP is prototype-free and class-based, with clean syntax modeled on modern dynamic languages.
+
+\subsection{Defining a Class}
+
+A class is defined with the \texttt{class} keyword. Methods are defined with \texttt{fn} inside the class body. The special \texttt{new} method is the constructor:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Class Definition}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Point {
+    fn new(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn distance() {
+        return sqrt(pow(self.x, 2) + pow(self.y, 2));
+    }
+
+    fn describe() {
+        return "Point(" + self.x + ", " + self.y + ")";
+    }
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Creating Objects}
+
+Objects are created with the \texttt{new} keyword, which calls the constructor:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Creating Objects}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let p = new Point(3, 4);
+
+say p.x;           # 3
+say p.y;           # 4
+say p.distance();  # 5
+say p.describe();  # Point(3, 4)
+
+# Mutate fields directly
+p.x = 10;
+say p.distance();  # sqrt(100 + 16) = 10.77...
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Class.method() Auto-Instantiation}
+
+Calling a method on a class (not an instance) auto-creates an object. This is syntactic sugar that calls \texttt{new} with the arguments, then calls the method:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Auto-Instantiation}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# These are equivalent:
+let p1 = Point.new(5, 12);  # explicit new
+let p2 = new Point(5, 12);  # contextual new keyword
+
+say p1.distance();  # 13
+say p2.distance();  # 13
+
+# Auto-instantiation works for ANY method, not just new:
+let p3 = Point.move_to(6, 8);  # creates Point(0,0), moves to (6,8)
+say p3.describe();  # Point(6, 8)
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Inheritance}
+
+Classes can extend other classes with the \texttt{extends} keyword. Child classes inherit all methods and fields from the parent:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Inheritance}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Point3D extends Point {
+    fn new(x, y, z) {
+        super(x, y);      # call parent constructor
+        self.z = z;
+    }
+
+    fn distance() {
+        let d2d = super.distance();  # call parent method
+        return sqrt(pow(d2d, 2) + pow(self.z, 2));
+    }
+
+    fn describe() {
+        return "Point3D(" + self.x + ", " + self.y +
+               ", " + self.z + ")";
+    }
+}
+
+let p3 = new Point3D(3, 4, 12);
+say p3.describe();  # Point3D(3, 4, 12)
+say p3.distance();  # sqrt(3²+4²+12²) = 13
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Super Calls}
+
+\texttt{super(args...)} calls the parent class constructor. \texttt{super.method(args...)} calls a parent method:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Super Calls}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Animal {
+    fn new(name, age) {
+        self.name = name;
+        self.age = age;
+    }
+
+    fn speak() {
+        say self.name + " makes a sound";
+    }
+
+    fn birthday() {
+        self.age = self.age + 1;
+        say self.name + " turned " + self.age + "!";
+    }
+}
+
+class Dog extends Animal {
+    fn new(name, age, breed) {
+        super(name, age);       # Animal.new(name, age)
+        self.breed = breed;
+    }
+
+    fn speak() {
+        say self.name + " barks!";  # override
+    }
+}
+
+let rex = new Dog("Rex", 3, "German Shepherd");
+rex.speak();      # Rex barks!
+rex.birthday();   # Rex turned 4!  (inherited from Animal)
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Static Methods}
+
+Static methods are defined with \texttt{static fn} and are called on the class (not instances). They don't have access to \texttt{self}:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Static Methods}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class MathUtil {
+    static fn square(x) { return x * x; }
+    static fn cube(x)   { return x * x * x; }
+}
+
+say MathUtil.square(7);  # 49
+say MathUtil.cube(3);    # 27
+
+# Static methods can't be called on instances
+let m = new MathUtil();
+# m.square(5);  # Error — static methods are class-only
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: OOP Implementation}}, fonttitle=\bfseries, sharp corners]
+CRISP's OOP system is implemented as a thin layer over hashes:
+
+\begin{itemize}
+    \item \textbf{Classes:} Stored as \texttt{Value::Class \{ name, parent, methods, static\_methods \}} in the environment. A class is a value like any other—it can be assigned to variables, passed to functions, and inspected.
+    \item \textbf{Objects:} Stored as \texttt{Value::Object \{ class, fields, methods \}}. The object carries a copy of its class's methods (snapshotted at construction time) and a reference to the class name for inheritance chain lookups.
+    \item \textbf{Inheritance:} Method resolution walks the parent chain at call time. \texttt{super} calls skip the current class and start at the parent, preventing infinite recursion.
+    \item \textbf{Self:} Bound automatically by \texttt{call\_method} when dispatching. \texttt{self} is a special variable injected into the method's environment.
+\end{itemize}
+
+This design keeps the interpreter simple while providing the full OOP experience—constructors, inheritance, method dispatch, and static methods—all built on CRISP's existing hash and function primitives.
+\end{tcolorbox}
+
+\needspace{10\baselineskip}
+
+% --- Modules ---
 \section{Modules}
 
 CRISP supports modular code organization with the \texttt{use} keyword. Currently, \texttt{use posix;} is the only built-in module.
@@ -1948,9 +2423,10 @@ for func in posix {
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Module System}}, fonttitle=\bfseries, sharp corners]
 The module system is under active development. Currently, only \texttt{use posix;} is supported. Future releases will extend this to user-defined modules (\texttt{use mymodule;}), import paths, and selective imports. The namespaced hash pattern (each module creating its own hash) will be the standard approach for all modules.
 \end{tcolorbox}
-\clearpage
 
-% --- 11. System Programming ---
+\needspace{10\baselineskip}
+
+% --- System Programming ---
 \section{System Programming with POSIX}
 
 CRISP provides full POSIX system call integration via an opt-in module. Unlike other scripting languages where system calls pollute the global namespace, CRISP loads POSIX on demand and namespaces all functions under a \texttt{posix} hash.
@@ -2059,7 +2535,6 @@ say env;
 \end{lstlisting}
 \end{tcolorbox}
 
-\clearpage
 \subsection{POSIX Function Reference}
 
 \begin{table}[H]
@@ -2122,8 +2597,10 @@ CRISP's decision to namespace POSIX under the \texttt{posix} hash solves the cla
 
 This pattern will extend to future modules: \texttt{use network;} creates a \texttt{network} hash, \texttt{use json;} creates a \texttt{json} hash, etc.
 \end{tcolorbox}
-\clearpage
-% --- 12. Console I/O ---
+
+\needspace{10\baselineskip}
+
+% --- Console I/O ---
 \section{Console Input and Output}
 
 CRISP provides type-safe console I/O with proper flush semantics. Output functions support both bare syntax (Perl-style) and parenthesized syntax (Python-style).
@@ -2211,7 +2688,6 @@ if eof == "" {
 \end{lstlisting}
 \end{tcolorbox}
 
-\needspace{5\baselineskip}
 \subsection{Flush Semantics}
 
 All input functions flush stdout before blocking on stdin. This guarantees the prompt is visible before the program waits for input:
@@ -2259,6 +2735,8 @@ say len({ a => 1, b => 2 });      # 2
 \end{lstlisting}
 \end{tcolorbox}
 
+\needspace{8\baselineskip}
+
 % --- Multi-Dimensional Arrays ---
 \section{Multi-Dimensional Arrays}
 
@@ -2304,7 +2782,7 @@ let @cube = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]];
 say @cube[0][1][0];   # 3
 \end{lstlisting}
 \end{tcolorbox}
-
+\clearpage
 \subsection{Nested Iteration}
 
 \texttt{for} loops iterate over each level, enabling nested traversal:
@@ -2330,28 +2808,6 @@ say @flat;  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
 \end{lstlisting}
 \end{tcolorbox}
 
-\subsection{Operations on Nested Arrays}
-
-All array methods work on nested arrays. \texttt{.contains()} checks for membership at each level:
-
-\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Nested Array Operations}}, fonttitle=\bfseries, sharp corners]
-\begin{lstlisting}
-let @matrix = [[1, 2], [3, 4]];
-
-# Row-level operations
-let @row = @matrix[0];
-say @row.contains(2);    # true
-
-# Matrix-level operations
-say @matrix.len();       # 2 (number of rows)
-say @matrix[1].len();    # 2 (length of row 1)
-
-# Map over rows
-let @transformed = @matrix.map(|row| => row.map(|x| => x * 2));
-say @transformed;        # [[2, 4], [6, 8]]
-\end{lstlisting}
-\end{tcolorbox}
-
 \begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: No Special Matrix Type}}, fonttitle=\bfseries, sharp corners]
 CRISP does not have a special matrix or tensor type. Multi-dimensional arrays are simply arrays of arrays. This design choice provides:
 
@@ -2364,44 +2820,479 @@ CRISP does not have a special matrix or tensor type. Multi-dimensional arrays ar
 Future releases may add dedicated linear algebra operations (\texttt{transpose}, \texttt{reshape}, \texttt{flatten}) as array methods.
 \end{tcolorbox}
 
-% --- 13. JSON Serialization (Planned) ---
-\section{JSON Serialization (Planned)}
+% --- JSON Serialization ---
+\needspace{10\baselineskip}
+\section{JSON Serialization}
 
-JSON serialization is planned for the v0.2.0 release. The intended API:
+JSON (JavaScript Object Notation) is the lingua franca of modern data exchange. Every web API, configuration file, and data pipeline speaks JSON. CRISP provides native JSON support with four functions that cover the full lifecycle: serialization, pretty-printing, deserialization, and validation.
 
-\begin{tcolorbox}[colback=softviolet!20, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Planned JSON API}}, fonttitle=\bfseries, sharp corners]
+\subsection{Serializing to JSON}
+
+The \texttt{to\_json} function converts any CRISP value into a compact JSON string. Hashes become JSON objects, arrays become JSON arrays, and scalar types map to their JSON equivalents:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Serialization}}, fonttitle=\bfseries, sharp corners]
 \begin{lstlisting}
-# Planned syntax (not yet implemented)
-use json;
+# Build a configuration object
+let config = {
+    name => "CRISP",
+    version => "0.1.5",
+    features => ["oop", "regex", "json", "networking"],
+    settings => { debug => true, port => 8080 }
+};
 
-let data = json::parse('{"name": "John", "age": 30}');
-say data.name;    # John
+# Compact JSON
+let compact = to_json(config);
+say compact;
+# {"features":["oop","regex","json","networking"],"name":"CRISP",
+#  "settings":{"debug":true,"port":8080},"version":"0.1.5"}
 
-let output = json::stringify({ name => "Alice", age => 25 });
-say output;  # {"name":"Alice","age":25}
+# Pretty-printed JSON (indented, multi-line)
+say to_json_pretty(config);
+# {
+#   "features": ["oop", "regex", "json", "networking"],
+#   "name": "CRISP",
+#   "settings": {
+#     "debug": true,
+#     "port": 8080
+#   },
+#   "version": "0.1.5"
+# }
 \end{lstlisting}
 \end{tcolorbox}
-
 \clearpage
-% --- 14. Network Programming (Planned) ---
-\section{Network Programming (Planned)}
+\subsection{Deserializing from JSON}
 
-TCP networking is planned for the v0.2.0 release. The intended API:
+\texttt{from\_json} parses a JSON string into native CRISP values. JSON objects become hashes (with dot-notation field access), arrays become CRISP arrays, and scalar values map directly:
 
-\begin{tcolorbox}[colback=softviolet!20, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Planned Network API}}, fonttitle=\bfseries, sharp corners]
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Parsing}}, fonttitle=\bfseries, sharp corners]
 \begin{lstlisting}
-# Planned syntax (not yet implemented)
-use network;
+# Parse a JSON string
+let data = from_json('{"x": 10, "y": 20, "label": "point"}');
 
-let server = network::tcp_listen("0.0.0.0", 8080);
-let client = network::tcp_accept(server);
-let data = client.read(1024);
-client.write("HTTP/1.1 200 OK\n\nHello!");
-client.close();
+# Access fields with dot notation
+say data.x;       # 10
+say data.y;       # 20
+say data.label;   # "point"
+
+# Parse a JSON array
+let items = from_json('[1, 2, 3, 4, 5]');
+say items.len();  # 5
+say items[2];     # 3
 \end{lstlisting}
 \end{tcolorbox}
 
-% --- 15. Performance ---
+\subsection{Validation}
+
+\texttt{json\_valid} checks whether a string is syntactically valid JSON without parsing it into values. Use it to validate input before processing:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Validation}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Valid JSON
+say json_valid('{"a": 1}');     # true
+say json_valid('[1, 2, 3]');    # true
+say json_valid('"hello"');      # true
+say json_valid('42');           # true
+
+# Invalid JSON
+say json_valid('not json');     # false
+say json_valid('{bad}');        # false
+say json_valid('[1, 2,]');      # false  (trailing comma)
+\end{lstlisting}
+\end{tcolorbox}
+\clearpage
+\subsection{A Complete Example: Configuration Loader}
+
+Here is a practical program that reads a JSON configuration file, validates it, and uses the settings to control program behavior:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Configuration Loader (config\_loader.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# config_loader.csp — Load and validate a JSON config file
+
+fn load_config(path) {
+    if !file_exists(path) {
+        say "Error: config file '" + path + "' not found.";
+        exit(1);
+    }
+
+    let raw = read_file(path);
+
+    if !json_valid(raw) {
+        say "Error: invalid JSON in '" + path + "'.";
+        exit(1);
+    }
+
+    let config = from_json(raw);
+    return config;
+}
+
+# Load and display
+let config = load_config("app.json");
+
+say "App: " + config.name;
+say "Version: " + config.version;
+
+# Iterate over features
+say "Features:";
+for feature in config.features {
+    say "  - " + feature;
+}
+
+# Use nested settings
+if config.settings.debug {
+    say "Debug mode: ON";
+    say "Port: " + config.settings.port;
+    say "Full config (pretty):";
+    say to_json_pretty(config);
+}
+\end{lstlisting}
+\end{tcolorbox}
+\clearpage
+\subsection{JSON as a Data Exchange Format}
+
+One of the most common scripting tasks is transforming data between formats. Here is a program that reads a JSON file, filters and transforms the data, and writes the result back as JSON—a pattern used daily in data pipelines:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Transform Pipeline (json\_transform.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# json_transform.csp — Filter and transform JSON data
+
+# Sample data: list of users
+let users_json = '[{"name":"Alice","age":25,"active":true},
+                   {"name":"Bob","age":17,"active":false},
+                   {"name":"Charlie","age":30,"active":true},
+                   {"name":"Diana","age":22,"active":true}]';
+
+let users = from_json(users_json);
+
+# Filter: only active users 18+
+let adults = users.filter(|u| => u.active && u.age >= 18);
+
+# Transform: add a display_name field
+let enriched = adults.map(|u| => {
+    u.display_name = u.name + " (" + u.age + ")";
+    return u;
+});
+
+# Output: pretty-printed JSON
+say to_json_pretty(enriched);
+\end{lstlisting}
+\end{tcolorbox}
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Why JSON Matters in CRISP}}, fonttitle=\bfseries, sharp corners]
+JSON support in CRISP follows the language's design philosophy: simple, composable, and practical. The four functions—\texttt{to\_json}, \texttt{to\_json\_pretty}, \texttt{from\_json}, and \texttt{json\_valid}—cover the complete JSON lifecycle without ceremony. Combined with CRISP's native hash and array operations, JSON data is immediately usable: parse it, filter it with \texttt{.filter()}, transform it with \texttt{.map()}, and write it back. No intermediate classes, no boilerplate, no impedance mismatch.
+
+This is the same pattern that made Perl the king of text processing: read, transform, write. CRISP extends this pattern to structured data, making it equally natural to work with JSON APIs, configuration files, and data pipelines.
+\end{tcolorbox}
+
+\needspace{10\baselineskip}
+
+% --- Time and Date Functions ---
+\section{Time and Date Functions}
+
+Working with time is essential in scripting: timestamps for logging, date formatting for reports, scheduling, and measuring elapsed time. CRISP provides six time functions that cover Unix timestamps, human-readable dates, formatting, and parsing—all without external dependencies.
+
+\subsection{Getting the Current Time}
+
+Three functions return the current time at different resolutions:
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Time Functions}}
+\vspace{0.3em}
+\begin{tabular}{@{}lllp{6cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Returns}} & \textbf{\textcolor{white}{Resolution}} & \textbf{\textcolor{white}{Example Output}} \\
+\midrule
+\texttt{time()} & Int & Seconds & \texttt{1784987128} \\
+\texttt{timestamp()} & Int & Milliseconds & \texttt{1784987128638} \\
+\texttt{datetime()} & String & Seconds & \texttt{"2026-07-25 15:45:28"} \\
+\texttt{datetime\_utc()} & String & Seconds & \texttt{"2026-07-25 13:45:28 UTC"} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Basic Time Functions}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Unix timestamp — seconds since epoch (Jan 1, 1970)
+let now = time();
+say "Seconds since epoch: " + now;
+
+# Millisecond timestamp — for high-resolution timing
+let ms = timestamp();
+say "Milliseconds since epoch: " + ms;
+
+# Human-readable local time
+say "Local: " + datetime();
+# "Local: 2026-07-25 15:45:28"
+
+# Human-readable UTC time
+say "UTC:   " + datetime_utc();
+# "UTC:   2026-07-25 13:45:28 UTC"
+\end{lstlisting}
+\end{tcolorbox}
+\clearpage
+\subsection{Formatting Dates}
+
+\texttt{strftime} formats a Unix timestamp into a human-readable string using format specifiers. This is the same \texttt{strftime} familiar to C, Perl, and Python programmers:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Formatting with strftime}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let now = time();
+
+# Common formats
+say strftime("%Y-%m-%d", now);           # 2026-07-25  (ISO date)
+say strftime("%H:%M:%S", now);           # 15:45:28    (time)
+say strftime("%Y-%m-%d %H:%M:%S", now);  # 2026-07-25 15:45:28 (datetime)
+say strftime("%A, %B %d, %Y", now);      # Saturday, July 25, 2026
+say strftime("%I:%M %p", now);           # 03:45 PM    (12-hour)
+
+# Custom log format
+say strftime("[%Y-%m-%d %H:%M:%S]", now) + " Server started";
+# [2026-07-25 15:45:28] Server started
+\end{lstlisting}
+\end{tcolorbox}
+\vspace{1.5cm}
+\subsection{Parsing Dates}
+
+\texttt{strptime} does the reverse: it parses a date string into a Unix timestamp using the same format specifiers:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Parsing with strptime}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Parse a date string into a timestamp
+let ts = strptime("2026-01-15", "%Y-%m-%d");
+say ts;  # 1768435200 (Unix timestamp for Jan 15, 2026)
+
+# Verify by formatting back
+say strftime("%A, %B %d, %Y", ts);
+# Thursday, January 15, 2026
+
+# Parse a full datetime
+let ts2 = strptime("2026-07-25 15:45:28", "%Y-%m-%d %H:%M:%S");
+say ts2;  # should match time()
+\end{lstlisting}
+\end{tcolorbox}
+\clearpage
+\subsection{A Complete Example: Elapsed Time Calculator}
+
+Measuring how long something takes is a classic scripting task. Here is a program that times a computation and reports the result in human-readable form:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Elapsed Time Calculator (timer.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# timer.csp — Measure and display elapsed time
+
+fn elapsed(start_ms, end_ms) {
+    let diff_ms = end_ms - start_ms;
+
+    if diff_ms < 1000 {
+        return diff_ms + " ms";
+    }
+
+    let seconds = diff_ms / 1000.0;
+
+    if seconds < 60 {
+        return seconds + " seconds";
+    }
+
+    let minutes = int(seconds / 60.0);
+    let secs_left = seconds - (minutes * 60.0);
+    return minutes + " min " + secs_left + " sec";
+}
+
+# Time a computation
+say "Computing factorial(20)...";
+let start = timestamp();
+
+let result = 1;
+let i = 1;
+while i <= 20 {
+    result = result * i;
+    i = i + 1;
+}
+
+let end = timestamp();
+
+say "factorial(20) = " + result;
+say "Took: " + elapsed(start, end);
+\end{lstlisting}
+\end{tcolorbox}
+\clearpage
+\subsection{Date Arithmetic}
+
+Here is a practical program that computes age from a birth date and determines the day of the week someone was born:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Arithmetic (age\_calculator.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# age_calculator.csp — Compute age and birth day-of-week
+
+fn calculate_age(birth_date_str) {
+    let birth_ts = strptime(birth_date_str, "%Y-%m-%d");
+    let now_ts = time();
+
+    # Seconds in a year (approximate)
+    let seconds_per_year = 365.25 * 24 * 60 * 60;
+    let age = int((now_ts - birth_ts) / seconds_per_year);
+
+    let day_of_week = strftime("%A", birth_ts);
+
+    return {
+        age => age,
+        day_of_week => day_of_week,
+        birth_date => strftime("%B %d, %Y", birth_ts)
+    };
+}
+
+let info = calculate_age("1990-05-15");
+say "Born: " + info.birth_date;
+say "Day of week: " + info.day_of_week;
+say "Age: " + info.age + " years";
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Why strftime/strptime?}}, fonttitle=\bfseries, sharp corners]
+CRISP delegates date formatting and parsing to the C standard library's \texttt{strftime} and \texttt{strptime} functions. This is a deliberate choice:
+
+\begin{itemize}
+    \item \textbf{Familiarity:} The format specifiers (\texttt{\%Y}, \texttt{\%m}, \texttt{\%d}, \texttt{\%H}, \texttt{\%M}, \texttt{\%S}) are identical to C, Perl, Python, Ruby, and PHP. Anyone who has formatted dates in any of these languages already knows CRISP's date formatting.
+    \item \textbf{Locale-aware:} \texttt{\%A} produces the correct weekday name for the system's locale. On a Czech system, \texttt{strftime("\%A", ts)} returns ``pondělí'', not ``Monday''.
+    \item \textbf{No dependencies:} Using the C standard library means zero additional crates, zero build time, and zero security vulnerabilities from third-party date libraries.
+\end{itemize}
+
+The trade-off is that \texttt{strptime} is not available on Windows (it's a POSIX extension). For cross-platform date parsing, future CRISP releases will provide a pure-Rust alternative.
+\end{tcolorbox}
+
+\needspace{10\baselineskip}
+
+% --- Network Programming ---
+\section{Network Programming}
+
+CRISP provides network I/O through high-level convenience functions for the most common tasks: fetching web resources, sending data to servers, and working with URLs.
+
+\subsection{Fetching Web Resources}
+
+The \texttt{http\_get} function fetches a URL and returns the response body as a string:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{HTTP GET}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Fetch a web page
+let html = http_get("https://example.com");
+say "Fetched " + html.len() + " bytes";
+
+# Fetch JSON from an API
+let response = http_get("https://api.github.com/repos/user/crisp");
+if json_valid(response) {
+    let data = from_json(response);
+    say "Stars: " + data.stargazers_count;
+    say "Forks: " + data.forks_count;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Sending Data}
+
+\texttt{http\_post} sends data to a URL with a specified content type:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{HTTP POST}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Send JSON data
+let payload = to_json({
+    name => "CRISP",
+    version => "0.1.5"
+});
+
+let response = http_post("https://httpbin.org/post",
+                         payload,
+                         "application/json");
+
+say "Server responded: " + response;
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{URL Encoding and Decoding}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{URL Encoding}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Encode special characters for URLs
+say url_encode("hello world");      # hello%20world
+say url_encode("name=CRISP&v=1");   # name%3DCRISP%26v%3D1
+
+# Decode URL-encoded strings
+say url_decode("hello%20world");    # hello world
+say url_decode("name%3DCRISP");     # name=CRISP
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{A Complete Example: Simple Web Client}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Web Client (web\_client.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# web_client.csp — Fetch and display web resources
+
+fn fetch_json_api(url) {
+    say "Fetching: " + url;
+    let raw = http_get(url);
+
+    if raw == "" {
+        say "Error: no response from server.";
+        return null;
+    }
+
+    if !json_valid(raw) {
+        say "Error: response is not valid JSON.";
+        return null;
+    }
+
+    return from_json(raw);
+}
+
+# Try fetching a public API
+let data = fetch_json_api("https://api.github.com/repos/rust-lang/rust");
+
+if data != null {
+    say "Repository: " + data.full_name;
+    say "Description: " + data.description;
+    say "Stars: " + data.stargazers_count;
+    say "Language: " + data.language;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Network Function Reference}
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Network Functions}}
+\vspace{0.3em}
+\begin{tabular}{@{}llp{8cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\texttt{http\_get} & \texttt{http\_get(url) → String} & Fetch a URL via GET, return response body \\
+\texttt{http\_post} & \texttt{http\_post(url, body, content\_type?) → String} & POST data to a URL \\
+\texttt{url\_encode} & \texttt{url\_encode(s) → String} & Percent-encode special characters \\
+\texttt{url\_decode} & \texttt{url\_decode(s) → String} & Decode percent-encoded string \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: HTTP Support}}, fonttitle=\bfseries, sharp corners]
+CRISP's network module provides simple, blocking HTTP operations via the \texttt{ureq} crate—a minimal, dependency-light HTTP client. The design philosophy is:
+
+\begin{itemize}
+    \item \textbf{Simple by default:} \texttt{http\_get(url)} does one thing: fetches a URL and returns the body. No callbacks, no streams, no complexity.
+    \item \textbf{Opt-in complexity:} Future releases will add streaming responses, async I/O, and WebSocket support for advanced use cases.
+    \item \textbf{Self-contained:} The network functions are available globally (no \texttt{use network;} required) because web access is a fundamental scripting need, not a specialized system concern.
+\end{itemize}
+
+For low-level socket programming, CRISP delegates to the POSIX module (\texttt{use posix;} → \texttt{posix["socket"]}, \texttt{posix["connect"]}, etc.), giving you full control when needed.
+\end{tcolorbox}
+
+\needspace{10\baselineskip}
+
+% --- Performance ---
+\needspace{8\baselineskip}
 \section{Performance}
 
 \begin{tcolorbox}[colback=softviolet!20, colframe=softvioletdark, sharp corners]
@@ -2415,7 +3306,8 @@ client.close();
 \end{itemize}
 \end{tcolorbox}
 
-% --- 16. Comparison ---
+% --- Comparison ---
+\needspace{18\baselineskip}
 \section{Comparison with Other Languages}
 
 \begin{table}[H]
@@ -2434,13 +3326,17 @@ Memory Safety & \cmark & \xmark & \xmark & \cmark & \xmark \\
 One-liners & \cmark & \cmark & \xmark & \xmark & \cmark \\
 POSIX & \cmark & \cmark & \xmark & \cmark & \cmark \\
 Lambda & \cmark & \cmark & \cmark & \cmark & \xmark \\
+OOP & \cmark & \cmark & \cmark & \xmark & \xmark \\
 REPL & \cmark & \xmark & \cmark & \xmark & \xmark \\
 Fast Startup & \cmark & \cmark & \xmark & \xmark & \cmark \\
+JSON & \cmark & \cmark & \cmark & \xmark & \xmark \\
+HTTP Client & \cmark & \cmark & \cmark & \xmark & \xmark \\
 \bottomrule
 \end{tabular}
 \end{table}
-\clearpage
-% --- 17. Future Directions ---
+
+% --- Future Directions ---
+\needspace{28\baselineskip}
 \section{Future Directions}
 
 CRISP continues to evolve with planned features:
@@ -2460,16 +3356,23 @@ CRISP continues to evolve with planned features:
 \end{itemize}
 \end{tcolorbox}
 
-% --- 18. Conclusion ---
+\clearpage
+% --- Conclusion ---
+\vspace{1.5cm}
 \section{Conclusion}
 
 CRISP successfully combines Perl's expressiveness with Rust's safety. It provides a modern scripting experience with:
-- \textbf{Memory safety} guaranteed by Rust
-- \textbf{Perl-inspired} text processing and functional tools
-- \textbf{System access} through POSIX system calls
-- \textbf{Interactive development} via REPL
-- \textbf{One-liners} for quick scripting
 
+\begin{itemize}
+    \item \textbf{Memory safety} guaranteed by Rust
+    \item \textbf{Perl-inspired} text processing and functional tools
+    \item \textbf{System access} through POSIX system calls
+    \item \textbf{Interactive development} via REPL
+    \item \textbf{One-liners} for quick scripting
+    \item \textbf{Object-oriented programming} with classes, inheritance, and static methods
+    \item \textbf{Modern error handling} with try/catch/finally
+\end{itemize}
+\vspace{1.5cm}
 \begin{tcolorbox}[colback=softviolet!20, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Final Assessment}}, fonttitle=\bfseries, sharp corners]
 CRISP represents a significant step forward in scripting language design, bridging the gap between expressiveness and safety. It is suitable for:
 
@@ -2483,6 +3386,8 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 \textbf{\textcolor{rustorange}{"Keep your code CRISP and clean."}}
 \end{tcolorbox}
+
+\needspace{10\baselineskip}
 \clearpage
 % --- Appendix A: Standard Library Reference ---
 \section{Standard Library Reference}
@@ -2514,7 +3419,7 @@ CRISP represents a significant step forward in scripting language design, bridgi
 \begin{itemize}
     \item \texttt{int(value) → Int | Null} — Parse string to integer, returns null on failure.
     \item \texttt{float(value) → Float | Null} — Parse string to float, returns null on failure.
-    \item \texttt{type(value) → String} — Returns type name ("int", "float", "string", "array", "hash", "bool", "null", "ref", "function").
+    \item \texttt{type(value) → String} — Returns type name ("int", "float", "string", "array", "hash", "bool", "null", "ref", "function", "object", "class").
     \item \texttt{len(value) → Int} — Length of string, array, or hash.
 \end{itemize}
 
@@ -2522,8 +3427,14 @@ CRISP represents a significant step forward in scripting language design, bridgi
 \begin{itemize}
     \item \texttt{push(arr, val)} — Append to array.
     \item \texttt{pop(arr) → Value} — Remove and return last element.
+    \item \texttt{shift(arr) → Value} — Remove and return first element.
+    \item \texttt{unshift(arr, val)} — Prepend to array.
     \item \texttt{map(arr, callback) → Array} — Transform each element.
     \item \texttt{filter(arr, callback) → Array} — Keep matching elements.
+    \item \texttt{grep(arr, callback) → Array} — Alias for filter.
+    \item \texttt{sort(arr) → Array} — Sort array.
+    \item \texttt{take(arr, n) → Array} — First N elements.
+    \item \texttt{zip(arr1, arr2) → Array} — Pair elements from two arrays.
 \end{itemize}
 
 \subsection{Math and Random}
@@ -2534,7 +3445,7 @@ CRISP represents a significant step forward in scripting language design, bridgi
     \item \texttt{abs(x) → Float} — Absolute value.
     \item \texttt{min(a, b, ...) → Float} — Minimum value.
     \item \texttt{max(a, b, ...) → Float} — Maximum value.
-    \item \texttt{PI}, \texttt{E} — Mathematical constants.
+    \item \texttt{PI}, \texttt{E}, \texttt{TAU} — Mathematical constants.
 \end{itemize}
 
 \subsection{File I/O (High-Level)}
@@ -2544,12 +3455,67 @@ CRISP represents a significant step forward in scripting language design, bridgi
     \item \texttt{file\_exists(path) → Bool} — Check if file exists.
 \end{itemize}
 
+\subsection{JSON}
+\begin{itemize}
+    \item \texttt{to\_json(value) → String} — Serialize to JSON string.
+    \item \texttt{to\_json\_pretty(value) → String} — Pretty-printed JSON.
+    \item \texttt{from\_json(string) → Value} — Parse JSON string.
+    \item \texttt{json\_valid(string) → Bool} — Check if string is valid JSON.
+\end{itemize}
+
+\subsection{Crypto}
+\begin{itemize}
+    \item \texttt{md5(s) → String} — MD5 hash (hex).
+    \item \texttt{sha1(s) → String} — SHA-1 hash (hex).
+    \item \texttt{sha256(s) → String} — SHA-256 hash (hex).
+    \item \texttt{sha512(s) → String} — SHA-512 hash (hex).
+    \item \texttt{base64\_encode(s) → String} — Base64 encode.
+    \item \texttt{base64\_decode(s) → String} — Base64 decode.
+    \item \texttt{random\_bytes(n) → String} — Random hex bytes.
+\end{itemize}
+
+\subsection{Time}
+\begin{itemize}
+    \item \texttt{time() → Int} — Unix timestamp (seconds).
+    \item \texttt{timestamp() → Int} — Unix timestamp (milliseconds).
+    \item \texttt{datetime() → String} — Local datetime string.
+    \item \texttt{datetime\_utc() → String} — UTC datetime string.
+    \item \texttt{strftime(fmt, ts) → String} — Format timestamp.
+    \item \texttt{strptime(s, fmt) → Int} — Parse date string to timestamp.
+\end{itemize}
+
+\subsection{Network}
+\begin{itemize}
+    \item \texttt{http\_get(url) → String} — Fetch URL via HTTP GET.
+    \item \texttt{http\_post(url, body, content\_type?) → String} — POST data to URL.
+    \item \texttt{url\_encode(s) → String} — Percent-encode string for URLs.
+    \item \texttt{url\_decode(s) → String} — Decode percent-encoded string.
+\end{itemize}
+
+\subsection{Regex (stdlib)}
+\begin{itemize}
+    \item \texttt{regex\_match(text, pattern) → Bool} — Test if pattern matches.
+    \item \texttt{regex\_replace(text, pattern, replacement) → String} — Replace matches.
+    \item \texttt{regex\_split(text, pattern) → Array} — Split by regex.
+    \item \texttt{regex\_find\_all(text, pattern) → Array} — All matches.
+    \item \texttt{regex\_capture(text, pattern) → Array} — Capture groups.
+\end{itemize}
+
+\subsection{Testing}
+\begin{itemize}
+    \item \texttt{assert\_eq(a, b, msg?)} — Assert equality.
+    \item \texttt{assert\_ne(a, b, msg?)} — Assert inequality.
+    \item \texttt{assert\_true(cond, msg?)} — Assert truth.
+    \item \texttt{assert\_false(cond, msg?)} — Assert falsity.
+    \item \texttt{assert\_throws(fn)} — Assert function throws.
+\end{itemize}
+
 \subsection{Method Dispatch (Value Methods)}
-\texttt{Array methods:} \texttt{.contains(val)}, \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}
+\texttt{Array methods:} \texttt{.contains(val)}, \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}, \texttt{.take(n)}, \texttt{.zip(other)}
 
-\texttt{String methods:} \texttt{.contains(substr)}, \texttt{.len()}, \texttt{.split(delim)}, \texttt{.join(sep)}
+\texttt{String methods:} \texttt{.contains(substr)}, \texttt{.len()}, \texttt{.split(delim)}, \texttt{.join(sep)}, \texttt{.to\_lower()}, \texttt{.to\_upper()}
 
-\texttt{Hash methods:} \texttt{.keys()}, \texttt{.values()}, \texttt{.len()}
+\texttt{Hash methods:} \texttt{.keys()}, \texttt{.values()}, \texttt{.len()}, \texttt{.contains(key)}
 
 \subsection{POSIX Module (Opt-in via \texttt{use posix;})}
 \texttt{Processes:} \texttt{posix["fork"]}, \texttt{posix["execvp"]}, \texttt{posix["waitpid"]}, \texttt{posix["spawn"]}, \texttt{posix["getpid"]}, \texttt{posix["getppid"]}
@@ -2562,6 +3528,14 @@ CRISP represents a significant step forward in scripting language design, bridgi
 
 \texttt{Environment:} \texttt{posix["getenv"]}, \texttt{posix["setenv"]}, \texttt{posix["environ"]}
 
+\subsection{Process Management (stdlib)}
+\begin{itemize}
+    \item \texttt{system(cmd, args...) → Int} — Run command, return exit code.
+    \item \texttt{qx(cmd) → String} — Capture command output.
+    \item \texttt{pid() → Int} — Current process ID.
+\end{itemize}
+
+\needspace{10\baselineskip}
 \clearpage
 % --- Appendix B: Keyword Reference ---
 \section{Keyword Reference}
@@ -2570,14 +3544,14 @@ All CRISP keywords with their syntax and behavior.
 
 \rowcolors{2}{softviolet!30}{white}
 \begin{longtable}{@{}llp{8cm}@{}}
-\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0}}\\
+\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.5}}\\
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
 \midrule
 \endfirsthead
 
-\caption[]{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.0} (continued)}\\
+\caption[]{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.5} (continued)}\\
 \toprule
 \rowcolor{softvioletdark}
 \textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
@@ -2663,6 +3637,30 @@ Emits a catchable \texttt{UserError} with a message. Interchangeable with \textt
 Emits a catchable \texttt{UserError} with a message. Interchangeable with \texttt{throw}.\\
 & & \texttt{die "fatal error";} \\
 
+\texttt{class} & OOP &
+Defines a class with methods and optional parent.\\
+& & \texttt{class Point \{ fn new(x, y) \{ ... \} \}} \\
+
+\texttt{extends} & OOP &
+Specifies parent class for inheritance.\\
+& & \texttt{class Dog extends Animal \{ ... \}} \\
+
+\texttt{self} & OOP &
+Refers to the current object instance inside methods.\\
+& & \texttt{self.x = 10;} \\
+
+\texttt{super} & OOP &
+Calls parent constructor (\texttt{super(args)}) or method (\texttt{super.method(args)}).\\
+& & \texttt{super(x, y);} \hspace{1em} \texttt{super.distance();} \\
+
+\texttt{static} & OOP &
+Declares a static method (called on class, not instance).\\
+& & \texttt{static fn square(x) \{ return x * x; \}} \\
+
+\texttt{new} & OOP (Contextual) &
+Contextual keyword for object construction: \texttt{new ClassName(args)}.\\
+& & \texttt{let p = new Point(3, 4);} \\
+
 \texttt{print} & Output &
 Outputs arguments to stdout without trailing newline.\\
 & & \texttt{print "Hello, ", name;} \hspace{1em} \texttt{print("Hello, ", name);} (paren) \\
@@ -2693,6 +3691,8 @@ Represents absence of value. Returned by failed conversions.\\
 
 \bottomrule
 \end{longtable}
+
+\needspace{8\baselineskip}
 \clearpage
 \subsection{Control Flow Keywords}
 
@@ -2713,55 +3713,14 @@ Represents absence of value. Returned by failed conversions.\\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Built-in Functions (Not Keywords)}
-
-The following are built-in functions, not keywords — they are stored in the global environment and can be reassigned:
-
-\begin{table}[H]
-\centering
-\rowcolors{2}{softviolet!30}{white}
-\caption{\textcolor{darkpurple}{Built-in Functions}}
-\vspace{0.3em}
-\begin{tabular}{@{}llp{8cm}@{}}
-\toprule
-\rowcolor{softvioletdark}
-\textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
-\midrule
-\texttt{assert} & \texttt{assert(cond, msg?)} & Testing assertion. Errors if condition is false. \\
-\texttt{exit} & \texttt{exit(code?) → never returns} &
-Terminates process with exit code. \texttt{finally} blocks execute. Not catchable.\\
-\texttt{\_exit} & \texttt{\_exit(code?) → never returns} &
-Hard process exit. No cleanup, skips \texttt{finally}.\\
-\texttt{int} & \texttt{int(value) → Int ∣ Null} & Parse string to integer. Returns null on failure. \\
-\texttt{float} & \texttt{float(value) → Float ∣ Null} & Parse string to float. Returns null on failure. \\
-\texttt{type} & \texttt{type(value) → String} & Returns type name: "int", "float", "string", "array", "hash", "bool", "null", "ref", "function". \\
-\texttt{len} & \texttt{len(value) → Int} & Length of string, array, or hash. \\
-\texttt{push} & \texttt{push(arr, val)} & Append value(s) to array. Returns new length. \\
-\texttt{pop} & \texttt{pop(arr) → Value} & Remove and return last element. \\
-\texttt{map} & \texttt{map(arr, callback) → Array} & Transform each element through callback. \\
-\texttt{filter} & \texttt{filter(arr, callback) → Array} & Keep elements where callback returns true. \\
-\texttt{readline} & \texttt{readline(prompt?) → String} & Read line from stdin. Flushes stdout before blocking. \\
-\texttt{read} & \texttt{read(prompt?) → Int ∣ Float ∣ Str} & Auto-detecting input. Flushes stdout before blocking. \\
-\texttt{input} & \texttt{input(prompt?) → String} & Python-compatible alias for readline. \\
-\texttt{rand} & \texttt{rand(max?) → Int} & Random integer in 0..max-1. Uses xorshift64*. \\
-\texttt{sqrt} & \texttt{sqrt(x) → Float} & Square root. \\
-\texttt{pow} & \texttt{pow(base, exp) → Float} & Exponentiation. \\
-\texttt{abs} & \texttt{abs(x) → Float} & Absolute value. \\
-\texttt{min} & \texttt{min(a, b, ...) → Float} & Minimum of arguments. \\
-\texttt{max} & \texttt{max(a, b, ...) → Float} & Maximum of arguments. \\
-\texttt{read\_file} & \texttt{read\_file(path) → String} & Read entire file to string. \\
-\texttt{write\_file} & \texttt{write\_file(path, content) → Bool} & Write string to file. \\
-\texttt{file\_exists} & \texttt{file\_exists(path) → Bool} & Check if file exists. \\
-\bottomrule
-\end{tabular}
-\end{table}
 \clearpage
-
 % --- Bibliography ---
+\needspace{8\baselineskip}
 \section*{\textcolor{darkpurple}{References}}
 
 \begin{thebibliography}{99}
+\bibitem{kr} Kernighan, B. W. \& Ritchie, D. M. (1988). \textit{The C Programming Language} (2nd ed.). Prentice Hall.
+\bibitem{prata} Prata, S. (2013). \textit{C Primer Plus} (6th ed.). Addison-Wesley.
 \bibitem{perl} Wall, L. et al. (1987). \textit{Programming Perl}. O'Reilly Media.
 \bibitem{rust} Matsakis, N. \& Klock, F. (2014). \textit{The Rust Programming Language}. Mozilla.
 \bibitem{python} Van Rossum, G. (1991). \textit{Python Programming Language}. Python Software Foundation.

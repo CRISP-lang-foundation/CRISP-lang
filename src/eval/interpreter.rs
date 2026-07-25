@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::eval::{Environment, RuntimeError};
@@ -36,6 +37,21 @@ fn value_fmt(val: &Value) -> String {
         }
         Value::NativeFn(_) => "<native fn>".to_string(),
         Value::Ref(rc) => format!("Ref({})", value_fmt(&rc.borrow())),
+        Value::Class { name, parent, .. } => {
+            if let Some(p) = parent {
+                format!("class {} extends {}", name, p)
+            } else {
+                format!("class {}", name)
+            }
+        }
+        Value::Object { class, fields, .. } => {
+            let fields = fields.borrow();
+            let pairs: Vec<String> = fields
+                .iter()
+                .map(|(k, v)| format!("{}: {}", k, value_fmt(v)))
+                .collect();
+            format!("<{} {{{}}}>", class, pairs.join(", "))
+        }
         _ => format!("{:?}", val),
     }
 }
@@ -103,14 +119,18 @@ impl Interpreter {
     pub fn eval_statement(&mut self, stmt: &Stmt) -> Result<Value, RuntimeError> {
         match stmt {
             Stmt::Let { name, expr, .. } => {
-                let value = if let Some(e) = expr {
-                    self.eval_expression(e)?
-                } else {
-                    Value::Null
-                };
-                self.env.borrow_mut().define(name, value);
-                Ok(Value::Null)
-            }
+		let value = if let Some(e) = expr {
+		    self.eval_expression(e)?
+		} else {
+		    Value::Null
+		};
+		if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                    eprintln!("LET: Defining the variable '{}'", name);
+                    eprintln!("LET: '{}' = {:?}", name, value_fmt(&value));
+                }
+		self.env.borrow_mut().define(name, value.clone());
+		Ok(Value::Null)
+	    }
             Stmt::Assign { name, expr } => {
                 let value = self.eval_expression(expr)?;
                 self.env.borrow_mut().set(name, value)?;
@@ -135,6 +155,49 @@ impl Interpreter {
                 self.env.borrow_mut().define(name, func);
                 Ok(Value::Null)
             }
+            Stmt::Class {
+                name,
+                parent,
+                methods,
+                static_methods,
+            } => {
+                let class_env = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.env))));
+
+                // Register instance methods
+                let mut method_map = HashMap::new();
+                for m in methods {
+                    let func = Value::UserFn {
+                        name: format!("{}.{}", name, m.name),
+                        params: m.params.iter().map(|p| p.name.clone()).collect(),
+                        body: m.body.clone(),
+                        env: class_env.clone(),
+                    };
+                    method_map.insert(m.name.clone(), func);
+                }
+
+                // Register static methods
+                let mut static_map = HashMap::new();
+                for m in static_methods {
+                    let func = Value::UserFn {
+                        name: format!("{}::{}", name, m.name),
+                        params: m.params.iter().map(|p| p.name.clone()).collect(),
+                        body: m.body.clone(),
+                        env: class_env.clone(),
+                    };
+                    static_map.insert(m.name.clone(), func);
+                }
+
+                let class = Value::Class {
+                    name: name.clone(),
+                    parent: parent.clone(),
+                    methods: Rc::new(method_map),
+                    static_methods: Rc::new(static_map),
+                    env: class_env.clone(),
+                };
+
+                self.env.borrow_mut().define(name, class);
+                Ok(Value::Null)
+            }
             Stmt::Print(exprs) => {
                 for e in exprs {
                     let value = self.eval_expression(e)?;
@@ -152,7 +215,14 @@ impl Interpreter {
                 println!();
                 Ok(Value::Null)
             }
-
+	    Stmt::Warn(exprs) => {
+                for e in exprs {
+                    let value = self.eval_expression(e)?;
+                    eprint!("{}", value.as_str());
+                }
+                eprintln!();
+                Ok(Value::Null)
+            }
             Stmt::Die(expr) => {
                 let value = self.eval_expression(expr)?;
                 Err(RuntimeError::UserError(value.as_str()))
@@ -534,11 +604,19 @@ impl Interpreter {
                         MatchPattern::Wildcard => true,
                         MatchPattern::Var(_) => true,
                         MatchPattern::Int(i) => {
-                            if let Value::Int(v) = &val { v == i } else { false }
+                            if let Value::Int(v) = &val {
+                                v == i
+                            } else {
+                                false
+                            }
                         }
                         MatchPattern::Str(s) => val.as_str() == *s,
                         MatchPattern::Bool(b) => {
-                            if let Value::Bool(v) = &val { v == b } else { false }
+                            if let Value::Bool(v) = &val {
+                                v == b
+                            } else {
+                                false
+                            }
                         }
                     };
 
@@ -708,25 +786,280 @@ impl Interpreter {
                     env: captured_env,
                 })
             }
-            Expr::FieldAccess { object, field } => {
-                let obj = self.eval_expression(object)?;
-                match obj {
-                    Value::Hash(hash) => {
-                        let hash = hash.borrow();
-                        if let Some(value) = hash.get(field.as_str()) {
-                            Ok(value.clone())
-                        } else {
-                            Err(RuntimeError::UndefinedVariable(format!(
-                                "Field '{}' not found",
-                                field
-                            )))
+
+            // ─── OOP: Object creation ──────────────────────────────────
+            Expr::Object {
+                class,
+                args,
+                named_args,
+            } => {
+                let class_val = self
+                    .env
+                    .borrow()
+                    .get(class)
+                    .ok_or_else(|| RuntimeError::UndefinedVariable(class.clone()))?;
+
+                match class_val {
+                    Value::Class {
+                        name,
+                        methods,
+                        env: _,
+                        ..
+                    } => {
+                        let fields = Rc::new(RefCell::new(HashMap::new()));
+                        let mut call_args = Vec::new();
+
+                        // Evaluate positional arguments
+                        for arg in args {
+                            call_args.push(self.eval_expression(arg)?);
                         }
+
+                        // Evaluate named arguments
+                        let mut named_map = HashMap::new();
+                        for (key, expr) in named_args {
+                            let val = self.eval_expression(expr)?;
+                            named_map.insert(key.clone(), val);
+                        }
+
+                        // If there's a constructor, call it
+                        if let Some(ctor) = methods.get("new") {
+                            // Create a temporary object for self
+                            let temp_obj = Value::Object {
+				class: name.clone(),
+				fields: fields.clone(),
+				methods: methods.clone(),
+			    };
+			    
+			    // Set named args as fields before constructor runs
+			    for (key, val) in &named_map {
+				fields.borrow_mut().insert(key.clone(), val.clone());
+			    }
+			    
+			    self.call_method(ctor, &temp_obj, &call_args)?;
+			} else {
+			    // No constructor, just set fields from named args
+			    for (key, val) in named_map {
+				fields.borrow_mut().insert(key, val);
+			    }
+			}
+
+                        Ok(Value::Object {
+                            class: name.clone(),
+                            fields,
+                            methods: methods.clone(),
+                        })
                     }
                     _ => Err(RuntimeError::TypeMismatch),
                 }
             }
-            Expr::Index { collection, index } => {
+
+            // ─── OOP: Method call ──────────────────────────────────────
+            Expr::MethodCall {
+                object,
+                method,
+                args,
+            } => {
+                let obj = self.eval_expression(object)?;
+                let mut call_args = Vec::new();
+                for arg in args {
+                    call_args.push(self.eval_expression(arg)?);
+                }
+
+                match obj {
+                    // Instance method call: object.method(args)
+                    Value::Object {
+                        methods: ref _object_methods,
+                        fields: ref fields,
+                        class: ref class,
+                    } => {
+                        // If calling via super, start at the parent class
+                        let skip_own = matches!(object.as_ref(), Expr::SuperRef);
+
+                        let mut current_class_name = class.clone();
+
+                        if skip_own {
+                            let class_val = self.env.borrow().get(&current_class_name);
+                            if let Some(Value::Class { ref parent, .. }) = class_val {
+                                match parent {
+                                    Some(p) => current_class_name = p.clone(),
+                                    None => {
+                                        return Err(RuntimeError::UndefinedVariable(format!(
+                                            "No parent class to call '{}' on via super", method
+                                        )));
+                                    }
+                                }
+                            }
+                        }
+
+                        // Walk the inheritance chain to find the method
+                        loop {
+                            let class_val = self.env.borrow().get(&current_class_name);
+                            if let Some(Value::Class {
+                                ref methods,
+                                ref parent,
+                                ..
+                            }) = class_val
+                            {
+                                if let Some(method_val) = methods.get(method.as_str()) {
+                                    return self.call_method(method_val, &obj, &call_args);
+                                }
+                                match parent {
+                                    Some(p) => current_class_name = p.clone(),
+                                    None => break,
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+
+                        // Check if it's a field containing a callable value
+                        if let Some(field_val) = fields.borrow().get(method.as_str()) {
+                            if let Value::UserFn { .. } = field_val {
+                                return self.call_method(&field_val, &obj, &call_args);
+                            }
+                            return Ok(field_val.clone());
+                        }
+
+                        Err(RuntimeError::UndefinedVariable(format!(
+                            "Method '{}' not found on class '{}'",
+                            method, class
+                        )))
+                    }
+                    // Static method call: Class.method(args)
+                    // ANY instance method called on a class automatically creates a new object
+                    Value::Class {
+                        methods,
+                        ref name,
+                        static_methods,
+                        ..
+                    } => {
+                        // First check static methods
+                        if let Some(method_val) = static_methods.get(method.as_str()) {
+                            return self.call_value(method_val, &call_args);
+                        }
+
+                        // Check instance methods (including 'new', 'create', 'make', etc.)
+                        if let Some(method_val) = methods.get(method.as_str()) {
+                            // UNIVERSAL BEHAVIOR: Any instance method called on a class
+                            // creates a new object and calls the method with it as 'self'
+                            let fields = Rc::new(RefCell::new(HashMap::new()));
+                            let temp_obj = Value::Object {
+                                class: name.clone(),
+                                fields: fields.clone(),
+                                methods: methods.clone(),
+                            };
+
+                            // Use call_method so `self` is bound correctly
+                            self.call_method(method_val, &temp_obj, &call_args)?;
+
+                            // Return the newly created object
+                            return Ok(temp_obj);
+                        }
+
+                        Err(RuntimeError::UndefinedVariable(format!(
+                            "Method '{}' not found on class '{}'",
+                            method, name
+                        )))
+                    }
+                    // ─── Non-OOP types (Array, String, Hash): delegate to built-in dispatch ───
+                    other => self.dispatch_builtin_method(other, method.as_str(), &call_args),
+                }
+            }
+
+            // ─── OOP: Self reference ──────────────────────────────────
+            Expr::SelfRef => self
+                .env
+                .borrow()
+                .get("self")
+                .ok_or_else(|| RuntimeError::UndefinedVariable("self".to_string())),
+
+            // ─── OOP: Super reference ─────────────────────────────────
+            Expr::SuperRef => self
+                .env
+                .borrow()
+                .get("self")
+                .ok_or_else(|| RuntimeError::UndefinedVariable("super".to_string())),
+
+            // ─── FieldAccess (Object + Hash) ──────────────────────────
+            Expr::FieldAccess { object, field } => {
+                let obj = self.eval_expression(object)?;
+                match obj {
+                    Value::Object { fields, .. } => fields
+                        .borrow()
+                        .get(field.as_str())
+                        .cloned()
+                        .ok_or_else(|| {
+                            RuntimeError::UndefinedVariable(format!(
+                                "Field '{}' not found",
+                                field
+                            ))
+                        }),
+                    Value::Hash(hash) => {
+                        let hash = hash.borrow();
+                        hash.get(field.as_str()).cloned().ok_or_else(|| {
+                            RuntimeError::UndefinedVariable(format!(
+                                "Field '{}' not found",
+                                field
+                            ))
+                        })
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+
+            // ─── OOP: Field assignment ────────────────────────────────
+            Expr::FieldAssign {
+                object,
+                field,
+                value,
+            } => {
+                let val = self.eval_expression(value)?;
+                let obj = self.eval_expression(object)?;
+                match obj {
+                    Value::Object { fields, .. } => {
+                        fields.borrow_mut().insert(field.clone(), val.clone());
+                        Ok(val)
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+	    Expr::Index { collection, index } => {
                 let coll = self.eval_expression(collection)?;
+
+                // ── Range slicing: coll[start..end] ────────────────
+                if let Expr::Range {
+                    start,
+                    end,
+                    inclusive,
+                } = index.as_ref()
+                {
+                    let s_val = self.eval_expression(start)?;
+                    let e_val = self.eval_expression(end)?;
+                    let s = s_val.as_number().unwrap_or(0.0) as usize;
+                    let e = e_val.as_number().unwrap_or(0.0) as usize;
+                    let e = if *inclusive { e + 1 } else { e };
+
+                    return match &coll {
+                        Value::Array(arr) => {
+                            let arr = arr.borrow();
+                            let e = e.min(arr.len());
+                            let s = s.min(e);
+                            Ok(Value::Array(Rc::new(RefCell::new(
+                                arr[s..e].to_vec(),
+                            ))))
+                        }
+                        Value::Str(string) => {
+                            let chars: Vec<char> = string.chars().collect();
+                            let e = e.min(chars.len());
+                            let s = s.min(e);
+                            let slice: String = chars[s..e].iter().collect();
+                            Ok(Value::Str(slice.into()))
+                        }
+                        _ => Err(RuntimeError::TypeMismatch),
+                    };
+                }
+
+                // ── Single-index access (existing logic) ─────────
                 let idx = self.eval_expression(index)?;
                 match &coll {
                     Value::Array(arr) => {
@@ -743,14 +1076,17 @@ impl Interpreter {
                     Value::Hash(hash) => {
                         let hash = hash.borrow();
                         let key = idx.as_str();
-                        hash.get(&key).cloned().ok_or_else(|| {
-                            RuntimeError::UndefinedVariable(format!("Key '{}' not found", key))
-                        })
+                        hash.get(&key)
+                            .cloned()
+                            .ok_or_else(|| RuntimeError::PointerOutOfBounds)
                     }
-                    Value::Str(s) => {
+                    Value::Str(string) => {
                         if let Value::Int(i) = idx {
-                            let ch = s.chars().nth(i as usize).unwrap_or('\0');
-                            Ok(Value::Str(ch.to_string().into()))
+                            let chars: Vec<char> = string.chars().collect();
+                            if i < 0 || i as usize >= chars.len() {
+                                return Err(RuntimeError::PointerOutOfBounds);
+                            }
+                            Ok(Value::Str(chars[i as usize].to_string().into()))
                         } else {
                             Err(RuntimeError::TypeMismatch)
                         }
@@ -817,247 +1153,11 @@ impl Interpreter {
                 args,
             } => {
                 let obj = self.eval_expression(object)?;
-
-                let mut call_args: Vec<Value> = vec![obj.clone()];
+                let mut extra_args = Vec::new();
                 for a in args {
-                    call_args.push(self.eval_expression(a)?);
+                    extra_args.push(self.eval_expression(a)?);
                 }
-
-                match method.as_str() {
-                    "len" => match &call_args[0] {
-                        Value::Str(s) => Ok(Value::Int(s.len() as i64)),
-                        Value::Array(a) => Ok(Value::Int(a.borrow().len() as i64)),
-                        Value::Hash(h) => Ok(Value::Int(h.borrow().len() as i64)),
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "split" => {
-                        let delim = if call_args.len() > 1 {
-                            call_args[1].as_str()
-                        } else {
-                            " ".to_string()
-                        };
-                        let s = call_args[0].as_str();
-                        let parts: Vec<Value> = s
-                            .split(&delim)
-                            .map(|p| Value::Str(p.to_string().into()))
-                            .collect();
-                        Ok(Value::Array(Rc::new(RefCell::new(parts))))
-                    }
-                    "join" => {
-                        if call_args.len() < 2 {
-                            return Err(RuntimeError::ArgumentError(
-                                "join() requires a separator argument".into(),
-                            ));
-                        }
-                        let sep = &call_args[1].as_str();
-                        let arr = match &call_args[0] {
-                            Value::Array(a) => a.borrow(),
-                            _ => return Err(RuntimeError::TypeMismatch),
-                        };
-                        let joined: String =
-                            arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
-                        Ok(Value::Str(joined.into()))
-                    },
-		    "contains" => {
-			if call_args.len() < 2 {
-			    return Err(RuntimeError::ArgumentError(
-				"contains() requires an argument".into(),
-			    ));
-			}
-			match &call_args[0] {
-			    Value::Str(haystack) => {
-				let needle = call_args[1].as_str();
-				Ok(Value::Bool(haystack.contains(&needle)))
-			    }
-			    Value::Array(arr) => {
-				let arr = arr.borrow();
-				let needle = &call_args[1];
-				let found = arr.iter().any(|v| v.as_str() == needle.as_str());
-				Ok(Value::Bool(found))
-			    }
-			    _ => Err(RuntimeError::TypeMismatch),
-			}
-		    },
-                    "push" => match &call_args[0] {
-                        Value::Array(a) => {
-                            for val in &call_args[1..] {
-                                a.borrow_mut().push(val.clone());
-                            }
-                            Ok(Value::Int(a.borrow().len() as i64))
-                        }
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "pop" => match &call_args[0] {
-                        Value::Array(a) => Ok(a.borrow_mut().pop().unwrap_or(Value::Null)),
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "shift" => match &call_args[0] {
-                        Value::Array(a) => {
-                            if a.borrow().is_empty() {
-                                Ok(Value::Null)
-                            } else {
-                                Ok(a.borrow_mut().remove(0))
-                            }
-                        }
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "unshift" => match &call_args[0] {
-                        Value::Array(a) => {
-                            for val in call_args[1..].iter().rev() {
-                                a.borrow_mut().insert(0, val.clone());
-                            }
-                            Ok(Value::Int(a.borrow().len() as i64))
-                        }
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "map" => {
-                        if call_args.len() < 2 {
-                            return Err(RuntimeError::ArgumentError(
-                                "map() requires a callback function".into(),
-                            ));
-                        }
-                        let callback = &call_args[1];
-                        match &call_args[0] {
-                            Value::Array(arr) => {
-                                let arr = arr.borrow();
-                                let mut result = Vec::new();
-                                for elem in arr.iter() {
-                                    let mapped = self.call_value(callback, &[elem.clone()])?;
-                                    result.push(mapped);
-                                }
-                                Ok(Value::Array(Rc::new(RefCell::new(result))))
-                            }
-                            Value::Hash(hash) => {
-                                let hash = hash.borrow();
-                                let mut result = Vec::new();
-                                for (k, v) in hash.iter() {
-                                    let mapped = self.call_value(
-                                        callback,
-                                        &[Value::Str(k.clone().into()), v.clone()],
-                                    )?;
-                                    result.push(mapped);
-                                }
-                                Ok(Value::Array(Rc::new(RefCell::new(result))))
-                            }
-                            _ => Err(RuntimeError::TypeMismatch),
-                        }
-                    }
-                    "filter" | "grep" => {
-                        if call_args.len() < 2 {
-                            return Err(RuntimeError::ArgumentError(
-                                "filter() requires a callback function".into(),
-                            ));
-                        }
-                        let callback = &call_args[1];
-                        match &call_args[0] {
-                            Value::Array(arr) => {
-                                let arr = arr.borrow();
-                                let mut result = Vec::new();
-                                for elem in arr.iter() {
-                                    let keep = self.call_value(callback, &[elem.clone()])?;
-                                    if keep.as_bool() {
-                                        result.push(elem.clone());
-                                    }
-                                }
-                                Ok(Value::Array(Rc::new(RefCell::new(result))))
-                            }
-                            Value::Hash(hash) => {
-                                let hash = hash.borrow();
-                                let mut result = std::collections::HashMap::new();
-                                for (k, v) in hash.iter() {
-                                    let keep = self.call_value(
-                                        callback,
-                                        &[Value::Str(k.clone().into()), v.clone()],
-                                    )?;
-                                    if keep.as_bool() {
-                                        result.insert(k.clone(), v.clone());
-                                    }
-                                }
-                                Ok(Value::Hash(Rc::new(RefCell::new(result))))
-                            }
-                            _ => Err(RuntimeError::TypeMismatch),
-                        }
-                    }
-                    "keys" => match &call_args[0] {
-                        Value::Hash(h) => {
-                            let keys: Vec<Value> = h
-                                .borrow()
-                                .keys()
-                                .map(|k| Value::Str(k.clone().into()))
-                                .collect();
-                            Ok(Value::Array(Rc::new(RefCell::new(keys))))
-                        }
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    "values" => match &call_args[0] {
-                        Value::Hash(h) => {
-                            let values: Vec<Value> = h.borrow().values().cloned().collect();
-                            Ok(Value::Array(Rc::new(RefCell::new(values))))
-                        }
-                        _ => Err(RuntimeError::TypeMismatch),
-                    },
-                    _ => match &call_args[0] {
-                        Value::Hash(h) => {
-                            let h = h.borrow();
-                            if let Some(Value::NativeFn(f)) = h.get(method.as_str()) {
-                                f(&call_args)
-                            } else if let Some(user_fn) = h.get(method.as_str()) {
-                                if let Value::UserFn {
-                                    params, body, env, ..
-                                } = user_fn
-                                {
-                                    let new_env = Environment::with_parent(env.clone());
-                                    let mut interpreter = Interpreter::with_env(new_env);
-                                    for (i, param) in params.iter().enumerate() {
-                                        if i < call_args.len() {
-                                            interpreter
-                                                .env
-                                                .borrow_mut()
-                                                .define(param, call_args[i].clone());
-                                        }
-                                    }
-                                    let mut result = Value::Null;
-                                    for stmt in body {
-                                        match interpreter.eval_statement(stmt) {
-                                            Ok(val) => result = val,
-                                            Err(RuntimeError::ReturnSignal(v)) => {
-                                                result = v;
-                                                break;
-                                            }
-                                            Err(RuntimeError::BreakSignal) => {
-                                                return Err(RuntimeError::InvalidOperation(
-                                                    "break outside loop".into(),
-                                                ));
-                                            }
-                                            Err(RuntimeError::ContinueSignal) => {
-                                                return Err(RuntimeError::InvalidOperation(
-                                                    "continue outside loop".into(),
-                                                ));
-                                            }
-                                            Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
-                                            Err(e) => return Err(e),
-                                        }
-                                    }
-                                    Ok(result)
-                                } else {
-                                    Err(RuntimeError::UndefinedVariable(format!(
-                                        "'{}' is not callable",
-                                        method
-                                    )))
-                                }
-                            } else {
-                                Err(RuntimeError::UndefinedVariable(format!(
-                                    "Method '{}' not found",
-                                    method
-                                )))
-                            }
-                        }
-                        _ => Err(RuntimeError::UndefinedVariable(format!(
-                            "Method '{}' not supported on this type",
-                            method
-                        ))),
-                    },
-                }
+                self.dispatch_builtin_method(obj, method.as_str(), &extra_args)
             }
             Expr::Ref(inner) => {
                 let val = self.eval_expression(inner)?;
@@ -1091,11 +1191,15 @@ impl Interpreter {
                         let end_char = b.chars().next().unwrap() as u32;
                         let range: Vec<Value> = if *inclusive {
                             (start_char..=end_char)
-                                .map(|c| Value::Str(char::from_u32(c).unwrap().to_string().into()))
+                                .map(|c| {
+                                    Value::Str(char::from_u32(c).unwrap().to_string().into())
+                                })
                                 .collect()
                         } else {
                             (start_char..end_char)
-                                .map(|c| Value::Str(char::from_u32(c).unwrap().to_string().into()))
+                                .map(|c| {
+                                    Value::Str(char::from_u32(c).unwrap().to_string().into())
+                                })
                                 .collect()
                         };
                         Ok(Value::Array(Rc::new(RefCell::new(range))))
@@ -1193,6 +1297,160 @@ impl Interpreter {
                 }
             }
             Expr::Call { func, args, .. } => {
+                // Check for super() call
+                if let Expr::SuperRef = func.as_ref() {
+                    if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                        eprintln!("CALL: Super call");
+                        eprintln!("CALL: Number of arguments: {}", args.len());
+                    }
+
+                    let mut eval_args = Vec::new();
+                    for (i, arg) in args.iter().enumerate() {
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("CALL: Evaluating super argument {}: {:?}", i, arg);
+                        }
+                        let arg_val = self.eval_expression(arg)?;
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("CALL: Super argument {} = {}", i, value_fmt(&arg_val));
+                        }
+                        eval_args.push(arg_val);
+                    }
+
+                    // --- Extract values BEFORE mutable borrow ---
+                    let super_fn_opt = self.env.borrow().get("super");
+                    let parent_class_opt =
+                        self.env.borrow().get("__parent_class__");
+
+                    // Try to find parent class constructor via 'super' binding
+                    if let Some(super_fn) = super_fn_opt {
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("CALL: Found 'super' in environment");
+                        }
+                        return self.call_value(&super_fn, &eval_args);
+                    }
+
+                    // Alternative: try to find parent class via '__parent_class__' binding
+                    if let Some(parent_class_val) = parent_class_opt {
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("CALL: Found '__parent_class__' in environment");
+                        }
+
+                        if let Value::Class {
+                            methods, name, ..
+                        } = parent_class_val
+                        {
+                            // Try to call parent's 'new' method
+                            if let Some(ctor) = methods.get("new").cloned() {
+                                if diagnostics::get_debug_level()
+                                    == diagnostics::DebugLevel::Verbose
+                                {
+                                    eprintln!(
+                                        "CALL: Found parent constructor 'new' on class '{}'",
+                                        name
+                                    );
+                                }
+
+                                // Create a temporary object for the parent instance
+                                let temp_fields = Rc::new(RefCell::new(HashMap::new()));
+                                let temp_obj = Value::Object {
+                                    class: name.clone(),
+                                    fields: temp_fields.clone(),
+                                    methods: methods.clone(),
+                                };
+
+                                // Use call_method so `self` is bound correctly
+                                self.call_method(&ctor, &temp_obj, &eval_args)?;
+
+                                // Copy fields from parent object to current object
+                                let self_obj_opt =
+                                    self.env.borrow().get("self");
+                                if let Some(self_obj) = self_obj_opt {
+                                    if let Value::Object { fields, .. } = self_obj {
+                                        for (key, value) in temp_fields.borrow().iter() {
+                                            fields
+                                                .borrow_mut()
+                                                .insert(key.clone(), value.clone());
+                                        }
+                                        if diagnostics::get_debug_level()
+                                            == diagnostics::DebugLevel::Verbose
+                                        {
+                                            eprintln!(
+                                                "CALL: Copied {} fields from parent to child",
+                                                temp_fields.borrow().len()
+                                            );
+                                        }
+                                    }
+                                }
+
+                                return Ok(Value::Null);
+                            } else {
+                                if diagnostics::get_debug_level()
+                                    == diagnostics::DebugLevel::Verbose
+                                {
+                                    eprintln!(
+                                        "CALL: Parent class '{}' has no 'new' method",
+                                        name
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    // Final fallback: derive parent from self -> self's class -> parent class
+                    let self_val = self.env.borrow().get("self");
+                    if let Some(Value::Object {
+                        class: class_name,
+                        ref fields,
+                        ..
+                    }) = self_val
+                    {
+                        let class_val = self.env.borrow().get(&class_name);
+                        if let Some(Value::Class {
+                            parent: Some(parent_name),
+                            ..
+                        }) = class_val
+                        {
+                            let parent_val =
+                                self.env.borrow().get(&parent_name);
+                            if let Some(Value::Class {
+                                ref methods,
+                                ref name,
+                                ..
+                            }) = parent_val
+                            {
+                                if let Some(ctor) = methods.get("new").cloned() {
+                                    let temp_fields =
+                                        Rc::new(RefCell::new(HashMap::new()));
+                                    let temp_obj = Value::Object {
+                                        class: name.clone(),
+                                        fields: temp_fields.clone(),
+                                        methods: Rc::clone(methods),
+                                    };
+
+                                    // Use call_method so `self` is bound correctly
+                                    self.call_method(&ctor, &temp_obj, &eval_args)?;
+
+                                    // Copy parent-initialised fields back to self
+                                    for (key, value) in temp_fields.borrow().iter() {
+                                        fields
+                                            .borrow_mut()
+                                            .insert(key.clone(), value.clone());
+                                    }
+
+                                    return Ok(Value::Null);
+                                }
+                            }
+                        }
+                    }
+
+                    if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                        eprintln!("CALL: 'super' not found in environment");
+                    }
+                    return Err(RuntimeError::UndefinedVariable("super".to_string()));
+                }
+
+                // ─── Normal function call ──────────────────────────────────────────
+
                 if self.recursion_depth > MAX_RECURSION_DEPTH {
                     return Err(RuntimeError::RecursionLimit(format!(
                         "Maximum recursion depth of {} exceeded",
@@ -1251,7 +1509,10 @@ impl Interpreter {
                     } => {
                         if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                             eprintln!("CALL: Executing function '{}'", name);
-                            eprintln!("CALL: Recursion depth before: {}", self.recursion_depth);
+                            eprintln!(
+                                "CALL: Recursion depth before: {}",
+                                self.recursion_depth
+                            );
                         }
 
                         self.recursion_depth += 1;
@@ -1285,7 +1546,9 @@ impl Interpreter {
                                 env: env.clone(),
                             };
                             interpreter.env.borrow_mut().define(&name, self_ref);
-                            if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            if diagnostics::get_debug_level()
+                                == diagnostics::DebugLevel::Verbose
+                            {
                                 eprintln!("CALL: Added self-reference '{}'", name);
                             }
                         }
@@ -1297,7 +1560,10 @@ impl Interpreter {
                                     if diagnostics::get_debug_level()
                                         == diagnostics::DebugLevel::Verbose
                                     {
-                                        eprintln!("CALL: Statement returned: {}", value_fmt(&val));
+                                        eprintln!(
+                                            "CALL: Statement returned: {}",
+                                            value_fmt(&val)
+                                        );
                                     }
                                     result = val;
                                 }
@@ -1342,14 +1608,28 @@ impl Interpreter {
                         }
 
                         self.recursion_depth -= 1;
-                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
-                            eprintln!("CALL: Function '{}' RETURNS {}", name, value_fmt(&result));
-                            eprintln!("CALL: Recursion depth after: {}", self.recursion_depth);
+                        if diagnostics::get_debug_level()
+                            == diagnostics::DebugLevel::Verbose
+                        {
+                            eprintln!(
+                                "CALL: Function '{}' RETURNS {}",
+                                name,
+                                value_fmt(&result)
+                            );
+                            eprintln!(
+                                "CALL: Recursion depth after: {}",
+                                self.recursion_depth
+                            );
                         }
                         Ok(result)
                     }
                     _ => Err(RuntimeError::TypeMismatch),
                 }
+            }
+	    Expr::Assign { name, value, .. } => {
+                let val = self.eval_expression(value)?;
+                self.env.borrow_mut().set(name, val.clone())?;
+                Ok(val)
             }
             Expr::Unary { op, expr } => {
                 let val = self.eval_expression(expr)?;
@@ -1362,7 +1642,9 @@ impl Interpreter {
                         }
                     }
                     crate::parser::UnaryOp::Not => Ok(Value::Bool(!val.as_bool())),
-                    crate::parser::UnaryOp::Ref => Ok(Value::Ref(Rc::new(RefCell::new(val)))),
+                    crate::parser::UnaryOp::Ref => {
+                        Ok(Value::Ref(Rc::new(RefCell::new(val))))
+                    }
                     crate::parser::UnaryOp::Deref => match val {
                         Value::Ref(rc) => Ok(rc.borrow().clone()),
                         _ => Err(RuntimeError::TypeMismatch),
@@ -1461,6 +1743,8 @@ impl Interpreter {
             (Value::Bool(l), Value::Bool(r)) => match op {
                 Eq => Ok(Value::Bool(l == r)),
                 Ne => Ok(Value::Bool(l != r)),
+                And => Ok(Value::Bool(l && r)),
+                Or => Ok(Value::Bool(l || r)),
                 _ => Err(RuntimeError::InvalidOperation(format!("{:?}", op))),
             },
             _ => {
@@ -1488,14 +1772,26 @@ impl Interpreter {
                 }
 
                 if matches!(op, Concat) {
-                    return Ok(Value::Str(format!("{}{}", left.as_str(), right.as_str()).into()));
+                    return Ok(Value::Str(
+                        format!("{}{}", left.as_str(), right.as_str()).into(),
+                    ));
                 }
 
                 // Null equality
                 if matches!(left, Value::Null) || matches!(right, Value::Null) {
                     match op {
-                        Eq => return Ok(Value::Bool(matches!(left, Value::Null) && matches!(right, Value::Null))),
-                        Ne => return Ok(Value::Bool(!(matches!(left, Value::Null) && matches!(right, Value::Null)))),
+                        Eq => {
+                            return Ok(Value::Bool(
+                                matches!(left, Value::Null)
+                                    && matches!(right, Value::Null),
+                            ))
+                        }
+                        Ne => {
+                            return Ok(Value::Bool(
+                                !(matches!(left, Value::Null)
+                                    && matches!(right, Value::Null)),
+                            ))
+                        }
                         _ => return Err(RuntimeError::TypeMismatch),
                     }
                 }
@@ -1503,7 +1799,9 @@ impl Interpreter {
                 if matches!(op, Repeat) {
                     if let Value::Int(n) = right {
                         if n >= 0 {
-                            return Ok(Value::Str(left.as_str().repeat(n as usize).into()));
+                            return Ok(Value::Str(
+                                left.as_str().repeat(n as usize).into(),
+                            ));
                         }
                     }
                     return Err(RuntimeError::TypeMismatch);
@@ -1514,6 +1812,7 @@ impl Interpreter {
         }
     }
 
+    /// Call a value as a function with positional arguments.
     fn call_value(&mut self, func: &Value, args: &[Value]) -> Result<Value, RuntimeError> {
         match func {
             Value::NativeFn(f) => f(args),
@@ -1571,6 +1870,372 @@ impl Interpreter {
             _ => Err(RuntimeError::InvalidOperation(
                 "Value is not callable".into(),
             )),
+        }
+    }
+
+    /// Call a method with `self` bound separately from declared parameters.
+    fn call_method(
+        &mut self,
+        method: &Value,
+        self_obj: &Value,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        match method {
+            Value::NativeFn(f) => {
+                let mut full_args = vec![self_obj.clone()];
+                full_args.extend_from_slice(args);
+                f(&full_args)
+            }
+            Value::UserFn {
+                params, body, env, ..
+            } => {
+                let saved_recursion = self.recursion_depth;
+                self.recursion_depth += 1;
+
+                let new_env = Environment::with_parent(env.clone());
+                let mut interpreter = Interpreter::with_env(new_env);
+
+                // Always define `self`
+                interpreter
+                    .env
+                    .borrow_mut()
+                    .define("self", self_obj.clone());
+
+                // Map declared params to the remaining args
+                for (i, param) in params.iter().enumerate() {
+                    if i < args.len() {
+                        interpreter
+                            .env
+                            .borrow_mut()
+                            .define(param, args[i].clone());
+                    } else {
+                        interpreter.env.borrow_mut().define(param, Value::Null);
+                    }
+                }
+
+                let mut result = Value::Null;
+                for stmt in body {
+                    match interpreter.eval_statement(stmt) {
+                        Ok(val) => result = val,
+                        Err(RuntimeError::ReturnSignal(v)) => {
+                            result = v;
+                            break;
+                        }
+                        Err(RuntimeError::BreakSignal) => {
+                            self.recursion_depth = saved_recursion;
+                            return Err(RuntimeError::InvalidOperation(
+                                "break outside loop".into(),
+                            ));
+                        }
+                        Err(RuntimeError::ContinueSignal) => {
+                            self.recursion_depth = saved_recursion;
+                            return Err(RuntimeError::InvalidOperation(
+                                "continue outside loop".into(),
+                            ));
+                        }
+                        Err(e @ RuntimeError::ExitSignal(_)) => {
+                            self.recursion_depth = saved_recursion;
+                            return Err(e);
+                        }
+                        Err(e) => {
+                            self.recursion_depth = saved_recursion;
+                            return Err(e);
+                        }
+                    }
+                }
+
+                self.recursion_depth = saved_recursion;
+                Ok(result)
+            }
+            _ => Err(RuntimeError::InvalidOperation(
+                "Value is not callable".into(),
+            )),
+        }
+    }
+
+    /// Dispatch built-in methods for non-OOP types (Array, String, Hash).
+    fn dispatch_builtin_method(
+        &mut self,
+        obj: Value,
+        method: &str,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        let mut call_args: Vec<Value> = vec![obj];
+        call_args.extend_from_slice(args);
+
+        match method {
+            "len" => match &call_args[0] {
+                Value::Str(s) => Ok(Value::Int(s.len() as i64)),
+                Value::Array(a) => Ok(Value::Int(a.borrow().len() as i64)),
+                Value::Hash(h) => Ok(Value::Int(h.borrow().len() as i64)),
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "split" => {
+                let delim = if call_args.len() > 1 {
+                    call_args[1].as_str()
+                } else {
+                    " ".to_string()
+                };
+                let s = call_args[0].as_str();
+                let parts: Vec<Value> = s
+                    .split(&delim)
+                    .map(|p| Value::Str(p.to_string().into()))
+                    .collect();
+                Ok(Value::Array(Rc::new(RefCell::new(parts))))
+            }
+            "join" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "join() requires a separator argument".into(),
+                    ));
+                }
+                let sep = &call_args[1].as_str();
+                let arr = match &call_args[0] {
+                    Value::Array(a) => a.borrow(),
+                    _ => return Err(RuntimeError::TypeMismatch),
+                };
+                let joined: String =
+                    arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
+                Ok(Value::Str(joined.into()))
+            }
+            "contains" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "contains() requires an argument".into(),
+                    ));
+                }
+                match &call_args[0] {
+                    Value::Str(haystack) => {
+                        let needle = call_args[1].as_str();
+                        Ok(Value::Bool(haystack.contains(&needle)))
+                    }
+                    Value::Array(arr) => {
+                        let arr = arr.borrow();
+                        let needle = &call_args[1];
+                        let found = arr.iter().any(|v| v.as_str() == needle.as_str());
+                        Ok(Value::Bool(found))
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+            "push" => match &call_args[0] {
+                Value::Array(a) => {
+                    for val in &call_args[1..] {
+                        a.borrow_mut().push(val.clone());
+                    }
+                    Ok(Value::Int(a.borrow().len() as i64))
+                }
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "pop" => match &call_args[0] {
+                Value::Array(a) => Ok(a.borrow_mut().pop().unwrap_or(Value::Null)),
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "shift" => match &call_args[0] {
+                Value::Array(a) => {
+                    if a.borrow().is_empty() {
+                        Ok(Value::Null)
+                    } else {
+                        Ok(a.borrow_mut().remove(0))
+                    }
+                }
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "unshift" => match &call_args[0] {
+                Value::Array(a) => {
+                    for val in call_args[1..].iter().rev() {
+                        a.borrow_mut().insert(0, val.clone());
+                    }
+                    Ok(Value::Int(a.borrow().len() as i64))
+                }
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "map" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "map() requires a callback function".into(),
+                    ));
+                }
+                let callback = &call_args[1];
+                match &call_args[0] {
+                    Value::Array(arr) => {
+                        let arr = arr.borrow();
+                        let mut result = Vec::new();
+                        for elem in arr.iter() {
+                            let mapped = self.call_value(callback, &[elem.clone()])?;
+                            result.push(mapped);
+                        }
+                        Ok(Value::Array(Rc::new(RefCell::new(result))))
+                    }
+                    Value::Hash(hash) => {
+                        let hash = hash.borrow();
+                        let mut result = Vec::new();
+                        for (k, v) in hash.iter() {
+                            let mapped = self.call_value(
+                                callback,
+                                &[Value::Str(k.clone().into()), v.clone()],
+                            )?;
+                            result.push(mapped);
+                        }
+                        Ok(Value::Array(Rc::new(RefCell::new(result))))
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+            "filter" | "grep" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "filter() requires a callback function".into(),
+                    ));
+                }
+                let callback = &call_args[1];
+                match &call_args[0] {
+                    Value::Array(arr) => {
+                        let arr = arr.borrow();
+                        let mut result = Vec::new();
+                        for elem in arr.iter() {
+                            let keep = self.call_value(callback, &[elem.clone()])?;
+                            if keep.as_bool() {
+                                result.push(elem.clone());
+                            }
+                        }
+                        Ok(Value::Array(Rc::new(RefCell::new(result))))
+                    }
+                    Value::Hash(hash) => {
+                        let hash = hash.borrow();
+                        let mut result = std::collections::HashMap::new();
+                        for (k, v) in hash.iter() {
+                            let keep = self.call_value(
+                                callback,
+                                &[Value::Str(k.clone().into()), v.clone()],
+                            )?;
+                            if keep.as_bool() {
+                                result.insert(k.clone(), v.clone());
+                            }
+                        }
+                        Ok(Value::Hash(Rc::new(RefCell::new(result))))
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+            "zip" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "zip() requires another array".into(),
+                    ));
+                }
+                match (&call_args[0], &call_args[1]) {
+                    (Value::Array(a), Value::Array(b)) => {
+                        let a = a.borrow();
+                        let b = b.borrow();
+                        let len = a.len().min(b.len());
+                        let mut result = Vec::new();
+                        for i in 0..len {
+                            result.push(Value::Array(Rc::new(RefCell::new(vec![
+                                a[i].clone(),
+                                b[i].clone(),
+                            ]))));
+                        }
+                        Ok(Value::Array(Rc::new(RefCell::new(result))))
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+            "take" => {
+                if call_args.len() < 2 {
+                    return Err(RuntimeError::ArgumentError(
+                        "take() requires a count".into(),
+                    ));
+                }
+                match (&call_args[0], &call_args[1]) {
+                    (Value::Array(arr), Value::Int(n)) => {
+                        let arr = arr.borrow();
+                        let count = (*n).min(arr.len() as i64) as usize;
+                        let result: Vec<Value> = arr[..count].to_vec();
+                        Ok(Value::Array(Rc::new(RefCell::new(result))))
+                    }
+                    _ => Err(RuntimeError::TypeMismatch),
+                }
+            }
+            "keys" => match &call_args[0] {
+                Value::Hash(h) => {
+                    let keys: Vec<Value> = h
+                        .borrow()
+                        .keys()
+                        .map(|k| Value::Str(k.clone().into()))
+                        .collect();
+                    Ok(Value::Array(Rc::new(RefCell::new(keys))))
+                }
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            "values" => match &call_args[0] {
+                Value::Hash(h) => {
+                    let values: Vec<Value> = h.borrow().values().cloned().collect();
+                    Ok(Value::Array(Rc::new(RefCell::new(values))))
+                }
+                _ => Err(RuntimeError::TypeMismatch),
+            },
+            _ => match &call_args[0] {
+                Value::Hash(h) => {
+                    let h = h.borrow();
+                    if let Some(Value::NativeFn(f)) = h.get(method) {
+                        f(&call_args)
+                    } else if let Some(user_fn) = h.get(method) {
+                        if let Value::UserFn {
+                            params, body, env, ..
+                        } = user_fn
+                        {
+                            let new_env = Environment::with_parent(env.clone());
+                            let mut interpreter = Interpreter::with_env(new_env);
+                            for (i, param) in params.iter().enumerate() {
+                                if i < call_args.len() {
+                                    interpreter
+                                        .env
+                                        .borrow_mut()
+                                        .define(param, call_args[i].clone());
+                                }
+                            }
+                            let mut result = Value::Null;
+                            for stmt in body {
+                                match interpreter.eval_statement(stmt) {
+                                    Ok(val) => result = val,
+                                    Err(RuntimeError::ReturnSignal(v)) => {
+                                        result = v;
+                                        break;
+                                    }
+                                    Err(RuntimeError::BreakSignal) => {
+                                        return Err(RuntimeError::InvalidOperation(
+                                            "break outside loop".into(),
+                                        ));
+                                    }
+                                    Err(RuntimeError::ContinueSignal) => {
+                                        return Err(RuntimeError::InvalidOperation(
+                                            "continue outside loop".into(),
+                                        ));
+                                    }
+                                    Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                            Ok(result)
+                        } else {
+                            Err(RuntimeError::UndefinedVariable(format!(
+                                "'{}' is not callable",
+                                method
+                            )))
+                        }
+                    } else {
+                        Err(RuntimeError::UndefinedVariable(format!(
+                            "Method '{}' not found",
+                            method
+                        )))
+                    }
+                }
+                _ => Err(RuntimeError::UndefinedVariable(format!(
+                    "Method '{}' not supported on this type",
+                    method
+                ))),
+            },
         }
     }
 }

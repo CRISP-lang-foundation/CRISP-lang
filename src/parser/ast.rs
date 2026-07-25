@@ -27,7 +27,7 @@ pub enum Stmt {
         expr: Option<Box<Expr>>,
         mutable: bool,
     },
-        Assign {
+    Assign {
         name: String,
         expr: Box<Expr>,
     },
@@ -56,6 +56,7 @@ pub enum Stmt {
     Expr(Box<Expr>),
     Say(Vec<Expr>),
     Print(Vec<Expr>),
+    Warn(Vec<Expr>),
     Die(Box<Expr>),
     Throw(Box<Expr>),
     Use(String),
@@ -74,6 +75,13 @@ pub enum Stmt {
     Match {
         value: Box<Expr>,
         arms: Vec<MatchArm>,
+    },
+    // --- OOP ---
+    Class {
+        name: String,
+        parent: Option<String>,
+        methods: Vec<Method>,
+        static_methods: Vec<Method>,
     },
 }
 
@@ -110,6 +118,14 @@ pub struct Param {
 }
 
 #[derive(Debug, Clone)]
+pub struct Method {
+    pub name: String,
+    pub params: Vec<Param>,
+    pub body: Vec<Stmt>,
+    pub is_static: bool,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expr {
     Int(i64),
     Float(f64),
@@ -120,6 +136,12 @@ pub enum Expr {
     Var {
         name: String,
         sigil: Option<VarType>,
+    },
+    // --- ASSIGNMENT ---
+    Assign {
+        name: String,
+        sigil: Option<VarType>,
+        value: Box<Expr>,
     },
     Binary {
         left: Box<Expr>,
@@ -206,6 +228,24 @@ pub enum Expr {
         object: Box<Expr>,
         field: String,
     },
+    
+    Object {
+        class: String,
+        args: Vec<Expr>,
+        named_args: Vec<(String, Expr)>,
+    },
+    MethodCall {
+        object: Box<Expr>,
+        method: String,
+        args: Vec<Expr>,
+    },
+    FieldAssign {
+        object: Box<Expr>,
+        field: String,
+        value: Box<Expr>,
+    },
+    SelfRef,
+    SuperRef,
 }
 
 impl Expr {

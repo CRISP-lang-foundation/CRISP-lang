@@ -31,15 +31,23 @@
 - [x] `int()` / `float()` type conversion
 - [x] `null` equality comparisons
 
+## v0.1.5 — Polish & Fixes (current)
+- [x] Python/Perl-like OOP (classes, constructors, inheritance, super)
+- [x] JSON serialization (to_json, from_json, to_json_pretty, json_valid)
+- [x] Network sockets (tcp_connect, tcp_listen, tcp_accept, tcp_read/write, http_get)
+- [x] Full regex module (match, replace, split, find_all, capture)
+- [x] Major bugfixes: brace-depth tracking, method dispatch routing, bool ops
+- [x] English-only codebase (all Slovak comments translated)
+- [x] New code examples
+
 ## v0.2.0 — Advanced Features
 - [ ] Module system (extend `use` for user-defined modules, import paths)
-- [ ] Full regex engine (beyond basic `=~` and `s///`)
-- [ ] OOP — Python3/Perl-like class system
-- [ ] JSON serialization
-- [ ] Network sockets
-- [ ] Stack traces for debugging
-- [ ] More type coercion (int ↔ float autoconversion)
+- [ ] Stack traces for debugging (file, line, backtrace on errors)
+- [ ] More type coercion (int ↔ float autoconversion in arithmetic)
 - [ ] Named arguments in function calls
+- [ ] File include/require mechanism
+- [ ] Signal handling (SIGINT, SIGTERM)
+- [ ] Process management (system, exec, qx, pid, shell — already in process.rs)
 
 ## v0.3.0 — Performance
 - [ ] Bytecode VM

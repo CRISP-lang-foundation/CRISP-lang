@@ -17,7 +17,8 @@
 mod builtins;
 mod environment;
 mod error;
-mod interpreter;
+
+pub mod interpreter;
 
 pub use environment::Environment;
 pub use error::{EvalError, RuntimeError};

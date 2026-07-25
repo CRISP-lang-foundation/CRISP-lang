@@ -1,0 +1,94 @@
+# ------- CRISP OOP Demo -----------------------------------------
+# Base class
+class Animal {
+    fn new(name, age) {
+        self.name = name;
+        self.age = age;
+    }
+
+    fn speak() {
+        say self.name + " makes a sound";
+    }
+
+    fn get_age() {
+        return self.age;
+    }
+
+    fn describe() {
+        say self.name + " is " + self.age + " years old";
+    }
+
+    fn birthday() {
+        self.age = self.age + 1;
+        say self.name + " turned " + self.age + "!";
+    }
+}
+
+# ------ Dog inherits from Animal -----------------------------------------
+class Dog extends Animal {
+    fn new(name, age, breed) {
+        super(name, age);          # calls Animal.new(name, age)
+        self.breed = breed;
+    }
+
+    fn speak() {
+        say self.name + " barks!"; # override
+    }
+
+    fn fetch() {
+        say self.name + " fetches the ball";
+    }
+
+    fn describe() {
+        say self.name + " is a " + self.breed + ", " + self.age + " years old";
+    }
+}
+
+# ----- Cat inherits from Animal ------------------------------------------
+class Cat extends Animal {
+    fn new(name, age, color) {
+        super(name, age);          # calls Animal.new(name, age)
+        self.color = color;
+        self.lives = 9;
+    }
+
+    fn speak() {
+        say self.name + " meows!"; # override
+    }
+
+    fn scratch() {
+        say self.name + " scratches the couch";
+        self.lives = self.lives - 1;
+        say self.name + " has " + self.lives + " lives left";
+    }
+
+    fn describe() {
+        say self.name + " is a " + self.color + " cat, " + self.age + " years old";
+    }
+}
+
+# ----- Show polymorphism -------------------------------------------------
+let dog = Dog.new("Rex", 3, "German Shepherd");
+let cat = Cat.new("Whiskers", 2, "orange");
+
+dog.speak();        # Rex barks!
+dog.fetch();        # Rex fetches the ball
+dog.describe();     # Rex is a German Shepherd, 3 years old
+say dog.get_age();  # 3
+
+say "---";
+
+cat.speak();        # Whiskers meows!
+cat.scratch();      # Whiskers scratches the couch ... 8 lives left
+cat.describe();     # Whiskers is a orange cat, 2 years old
+say cat.get_age();  # 2
+
+say "---";
+
+# ----- Polymorphism via arrays ---------------------------------------------
+let @pets = [dog, cat];
+
+for pet in @pets {
+    pet.speak();    # each calls its own speak()
+    pet.birthday(); # shared inherited method
+}

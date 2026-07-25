@@ -15,8 +15,10 @@
 use crate::eval::{Environment, RuntimeError};
 use crate::value::{CmpResult, Value};
 
+use crate::eval::interpreter::Interpreter;
+
 pub fn register(env: &mut Environment) {
-    // test() - deklarácia testu
+    // test() - declare a test
     env.define(
         "test",
         Value::NativeFn(|args| {
@@ -55,7 +57,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // assert_eq() - porovnanie hodnôt
+    // assert_eq() - compare two values for equality
     env.define(
         "assert_eq",
         Value::NativeFn(|args| {
@@ -85,7 +87,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // assert_ne() - porovnanie hodnôt (nerovnosť)
+    // assert_ne() - compare two values for inequality
     env.define(
         "assert_ne",
         Value::NativeFn(|args| {
@@ -115,7 +117,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // assert_true() - kontrola pravdivosti
+    // assert_true() - check that a value is truthy
     env.define(
         "assert_true",
         Value::NativeFn(|args| {
@@ -139,7 +141,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // assert_false() - kontrola nepravdivosti
+    // assert_false()
     env.define(
         "assert_false",
         Value::NativeFn(|args| {
@@ -162,8 +164,8 @@ pub fn register(env: &mut Environment) {
             Ok(Value::Bool(true))
         }),
     );
-
-    // assert_throws() - kontrola že funkcia vyhodí chybu
+    
+    // assert_throws() - check that a function throws an error
     env.define(
         "assert_throws",
         Value::NativeFn(|args| {
@@ -175,26 +177,86 @@ pub fn register(env: &mut Environment) {
 
             let func = &args[0];
 
-            match func {
-                Value::NativeFn(f) => match f(&[]) {
-                    Ok(_) => {
-                        let msg = if args.len() > 1 {
-                            args[1].as_str()
-                        } else {
-                            "Assertion failed: function did not throw".to_string()
-                        };
-                        return Err(RuntimeError::ArgumentError(msg));
+            // Call the function; it should throw/error
+            let call_result = match func {
+                Value::NativeFn(f) => f(&[]),
+                Value::UserFn {
+                    params,
+                    body,
+                    env,
+                    ..
+                } => {
+                    let new_env = Environment::with_parent(env.clone());
+                    let mut interpreter = Interpreter::with_env(new_env);
+
+                    for param in params {
+                        interpreter
+                            .env
+                            .borrow_mut()
+                            .define(&param, Value::Null);
                     }
-                    Err(_) => Ok(Value::Bool(true)),
-                },
-                _ => Err(RuntimeError::ArgumentError(
-                    "assert_throws needs a function".into(),
-                )),
+
+                    let mut threw: Option<RuntimeError> = None;
+                    for stmt in body {
+                        match interpreter.eval_statement(&stmt) {
+                            Ok(_) => {}
+                            Err(RuntimeError::ReturnSignal(_)) => break,
+                            Err(RuntimeError::BreakSignal) => {
+                                return Err(RuntimeError::InvalidOperation(
+                                    "break outside loop".into(),
+                                ));
+                            }
+                            Err(RuntimeError::ContinueSignal) => {
+                                return Err(RuntimeError::InvalidOperation(
+                                    "continue outside loop".into(),
+                                ));
+                            }
+                            Err(e @ RuntimeError::ExitSignal(_)) => return Err(e),
+                            Err(e) => {
+                                threw = Some(e);
+                                break;
+                            }
+                        }
+                    }
+                    if let Some(e) = threw {
+                        Err(e)
+                    } else {
+                        Ok(Value::Null)
+                    }
+                }
+                Value::Ref(rc) => {
+                    let inner = rc.borrow();
+                    match &*inner {
+                        Value::NativeFn(f) => f(&[]),
+                        _ => {
+                            return Err(RuntimeError::ArgumentError(
+                                "assert_throws needs a callable function".into(),
+                            ));
+                        }
+                    }
+                }
+                _ => {
+                    return Err(RuntimeError::ArgumentError(
+                        "assert_throws needs a function".into(),
+                    ));
+                }
+            };
+
+            match call_result {
+                Ok(_) => {
+                    let msg = if args.len() > 1 {
+                        args[1].as_str()
+                    } else {
+                        "Assertion failed: function did not throw".to_string()
+                    };
+                    Err(RuntimeError::ArgumentError(msg))
+                }
+                Err(_) => Ok(Value::Bool(true)),
             }
         }),
     );
 
-    // test_suite() - spustenie všetkých testov
+    // test_suite() - run all tests
     env.define(
         "test_suite",
         Value::NativeFn(|_| {

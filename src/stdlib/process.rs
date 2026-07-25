@@ -17,7 +17,7 @@ use crate::value::Value;
 use std::process::{Command, Stdio};
 
 pub fn register(env: &mut Environment) {
-    // system() - spustenie príkazu (ako v Perle)
+    // system() - run a command (like Perl)
     env.define(
         "system",
         Value::NativeFn(|args| {
@@ -37,7 +37,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // exec() - nahradenie aktuálneho procesu (ako v Perle)
+    // exec() - replace current process (like Perl)
     env.define(
         "exec",
         Value::NativeFn(|args| {
@@ -68,7 +68,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // qx() / backticks - spustenie a zachytenie výstupu (ako v Perle)
+    // qx() / backticks - run and capture output (like Perl)
     env.define(
         "qx",
         Value::NativeFn(|args| {
@@ -89,7 +89,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // pid() - alias pre getpid() z POSIX
+    // pid() - alias for getpid() from POSIX
     #[cfg(unix)]
     env.define(
         "pid",
@@ -102,7 +102,7 @@ pub fn register(env: &mut Environment) {
         Value::NativeFn(|_| Ok(Value::Int(std::process::id() as i64))),
     );
 
-    // shell() - spustenie cez shell (ako v Perle)
+    // shell() - run via shell (like Perl)
     env.define(
         "shell",
         Value::NativeFn(|args| {

@@ -14,11 +14,11 @@
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
-use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike, Utc};
+use chrono::{DateTime, Datelike, Local, NaiveDate, NaiveDateTime, Timelike, Utc};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn register(env: &mut Environment) {
-    // time() - aktuálny čas v sekundách
+    // time() - current time in seconds
     env.define(
         "time",
         Value::NativeFn(|_| {
@@ -30,7 +30,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // sleep() - zaspí na daný počet sekúnd
+    // sleep() - sleep for a given number of seconds
     env.define(
         "sleep",
         Value::NativeFn(|args| {
@@ -45,7 +45,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // sleep_ms() - zaspí na daný počet milisekúnd
+    // sleep_ms() - sleep for a given number of milliseconds
     env.define(
         "sleep_ms",
         Value::NativeFn(|args| {
@@ -62,7 +62,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // timestamp() - aktuálny timestamp (milisekúnd)
+    // timestamp() - current timestamp (milliseconds)
     env.define(
         "timestamp",
         Value::NativeFn(|_| {
@@ -74,7 +74,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // datetime() - aktuálny dátum a čas ako reťazec
+    // datetime() - current date and time as a string
     env.define(
         "datetime",
         Value::NativeFn(|_| {
@@ -93,7 +93,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // datetime_utc() - aktuálny UTC čas
+    // datetime_utc() - current UTC time
     env.define(
         "datetime_utc",
         Value::NativeFn(|_| {
@@ -112,7 +112,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // strftime() - formátovanie času
+    // strftime() - format a timestamp as a string
     env.define(
         "strftime",
         Value::NativeFn(|args| {
@@ -135,7 +135,7 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // strptime() - parsovanie času
+    // strptime() - parse a string into a timestamp
     env.define(
         "strptime",
         Value::NativeFn(|args| {
@@ -148,7 +148,12 @@ pub fn register(env: &mut Environment) {
             let date_str = args[0].as_str();
             let format = args[1].as_str();
 
+            // Try full datetime first, fall back to date-only
             let dt = NaiveDateTime::parse_from_str(&date_str, &format)
+                .or_else(|_| {
+                    NaiveDate::parse_from_str(&date_str, &format)
+                        .map(|d| d.and_hms_opt(0, 0, 0).unwrap())
+                })
                 .map_err(|e| RuntimeError::ArgumentError(format!("Invalid date format: {}", e)))?;
 
             let timestamp = dt.and_utc().timestamp();

@@ -1,0 +1,751 @@
+# ===================================================================
+# CRISP Standard Library Demo
+# ===================================================================
+
+say "╔══════════════════════════════════════════════════════════╗";
+say "║          🦀 CRISP Standard Library Demo                  ║";
+say "╚══════════════════════════════════════════════════════════╝";
+say "";
+
+# -----------------------------------------------------------------
+# Console I/O
+# -----------------------------------------------------------------
+say "--- Console I/O ----------------------------------------------";
+say "";
+
+say "print() — output without newline:";
+print "Hello, ";
+say "world!";
+say "";
+
+say "warn() — output to STDERR:";
+warn "This is a warning message!";
+say "";
+
+say "readline() — read string input:";
+say "  Try: let name = readline('Name: ');";
+say "";
+
+say "read() — auto-detect type:";
+say "  Try: let age = read('Age: ');  # returns Int";
+say "";
+
+say "input() — Python alias:";
+say "  Try: let color = input('Color: ');";
+say "";
+
+# -----------------------------------------------------------------
+# Type Conversion
+# -----------------------------------------------------------------
+say "--- Type Conversion -----------------------------------------";
+say "";
+
+say "int('42')         → " + int("42");
+say "int('3.14')       → " + int("3.14");        # null — not an integer
+say "float('3.14')     → " + float("3.14");
+say "float('not num')  → " + float("not num");   # null
+say "type(42)          → " + type(42);
+say "type(3.14)        → " + type(3.14);
+say "type('hello')     → " + type("hello");
+say "type([1, 2, 3])   → " + type([1, 2, 3]);
+say "type({a => 1})    → " + type({a => 1});
+say "type(|x| => x)    → " + type(|x| => x);
+say "";
+
+# -----------------------------------------------------------------
+# Math Functions
+# -----------------------------------------------------------------
+say "--- Math Functions ------------------------------------------";
+say "";
+
+say "Constants:";
+say "  PI  = " + PI;
+say "  E   = " + E;
+say "  TAU = " + TAU;
+say "";
+
+say "sqrt(16)          → " + sqrt(16);
+say "sqrt(2.0)         → " + sqrt(2.0);
+say "pow(2, 10)        → " + pow(2, 10);
+say "pow(2.5, 3.0)     → " + pow(2.5, 3.0);
+say "abs(-42)          → " + abs(-42);
+say "abs(-3.14)        → " + abs(-3.14);
+say "min(3, 7)         → " + min(3, 7);
+say "max(3, 7)         → " + max(3, 7);
+say "";
+
+say "rand() — 0..MAX:";
+say "  rand()     → " + rand();
+say "  rand()     → " + rand();
+say "  rand(100)  → " + rand(100);
+say "  rand(10)   → " + rand(10);
+say "";
+
+# -----------------------------------------------------------------
+# String Operations
+# -----------------------------------------------------------------
+say "--- String Operations ---------------------------------------";
+say "";
+
+let s = "hello,world,crisp,lang";
+say "s = '" + s + "'";
+say "";
+
+say "s.len()            → " + s.len();
+say "s.contains('crisp')→ " + s.contains("crisp");
+say "s.contains('rust') → " + s.contains("rust");
+say "";
+
+say "s.split(',')       → " + s.split(",");
+say "s.split(',').join(' | ') → " + s.split(",").join(" | ");
+say "";
+
+say "String concatenation:";
+say "  'hello' + ' ' + 'world' → " + ("hello" + " " + "world");
+say "  'ha' x 5                → " + ("ha" x 5);
+say "";
+
+# -----------------------------------------------------------------
+# Array Operations
+# -----------------------------------------------------------------
+say "--- Array Operations ----------------------------------------";
+say "";
+
+let nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+say "nums = " + nums;
+say "";
+
+say "length → nums.len() = " + nums.len();
+say "index  → nums[0]    = " + nums[0];
+say "index  → nums[4]    = " + nums[4];
+say "index  → nums[-1]   = " + nums[nums.len() - 1];
+say "";
+
+say "push / pop:";
+nums.push(11);
+say "  after push(11):      " + nums;
+say "  pop() →               " + nums.pop();
+say "  after pop():          " + nums;
+say "";
+
+say "shift / unshift:";
+say "  shift() →             " + nums.shift();
+say "  after shift():        " + nums;
+nums.unshift(1);
+say "  after unshift(1):     " + nums;
+say "";
+
+say "contains:";
+say "  nums.contains(5)  → " + nums.contains(5);
+say "  nums.contains(99) → " + nums.contains(99);
+say "";
+
+say "map — transform each element:";
+let doubled = nums.map(|x| => x * 2);
+say "  nums.map(|x| => x * 2) → " + doubled;
+say "";
+
+say "filter — keep elements matching predicate:";
+let evens = nums.filter(|x| => x % 2 == 0);
+say "  nums.filter(|x| => x % 2 == 0) → " + evens;
+say "";
+
+say "take — first N elements:";
+say "  nums.take(3) → " + nums.take(3);
+say "  nums.take(0) → " + nums.take(0);
+say "";
+
+say "zip — pair elements:";
+let a = [10, 20, 30];
+let b = [1, 2, 3];
+let zipped = a.zip(b);
+say "  [10,20,30].zip([1,2,3]) → " + zipped;
+say "  zipped[0]               → " + zipped[0];
+say "";
+
+say "Chained pipeline:";
+let pipeline = nums
+    .map(|x| => x * 3)
+    .filter(|x| => x > 15)
+    .take(3);
+say "  map(*3) → filter(>15) → take(3) → " + pipeline;
+say "";
+
+say "sort:";
+let unsorted = [3, 1, 4, 1, 5, 9, 2, 6];
+let sorted = sort(unsorted);
+say "  sort([3,1,4,1,5,9,2,6]) → " + sorted;
+say "";
+
+# -----------------------------------------------------------------
+# Standalone Array Functions
+# -----------------------------------------------------------------
+say "--- Standalone Array Functions ------------------------------";
+say "";
+
+let items = ["banana", "apple", "cherry"];
+say "map(array, func):";
+say "  map(items, |x| => x + '!') → " + map(items, |x| => x + "!");
+say "";
+
+say "grep(array, func):";
+say "  grep(items, |x| => x.len() > 5) → " + grep(items, |x| => x.len() > 5);
+say "";
+
+let unsorted2 = [42, 7, 13, 99, 1];
+say "sort(arr):";
+say "  sort(unsorted2) → " + sort(unsorted2);
+say "";
+
+say "join(arr, sep) — method syntax:";
+say "  items.join(', ') → " + items.join(", ");
+say "";
+
+# -----------------------------------------------------------------
+# Hash Operations
+# -----------------------------------------------------------------
+say "--- Hash Operations -----------------------------------------";
+say "";
+
+let person = {
+    name => "Alice",
+    age  => 30,
+    city => "Prague"
+};
+say "person = " + person;
+say "";
+
+say "Dot notation field access:";
+say "  person.name → " + person.name;
+say "  person.age  → " + person.age;
+say "  person.city → " + person.city;
+say "";
+
+say "Hash methods:";
+say "  person.keys()   → " + person.keys();
+say "  person.values() → " + person.values();
+say "  person.len()    → " + person.len();
+say "";
+
+say "Nested hashes:";
+let company = {
+    name => "CRISP Inc",
+    address => {
+        city => "Prague",
+        country => "Czech Republic"
+    }
+};
+say "  company.address.city → " + company.address.city;
+say "  company.address.country → " + company.address.country;
+say "";
+
+# -----------------------------------------------------------------
+# Slicing & Ranges
+# -----------------------------------------------------------------
+say "--- Slicing & Ranges ----------------------------------------";
+say "";
+
+let slice_data = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+say "slice_data = " + slice_data;
+say "slice_data[2..5]     → " + slice_data[2..5];
+say "slice_data[0..2]     → " + slice_data[0..2];
+say "slice_data[7..9]     → " + slice_data[7..9];
+say "";
+
+say "String slicing:";
+let msg = "Hello, CRISP!";
+say "msg    = " + msg;
+say "msg[0..4]  → " + msg[0..4];
+say "msg[7..11] → " + msg[7..11];
+say "";
+
+say "Range expressions:";
+say "  1..5    → " + (1..5);
+say "  'a'..'f' → " + ("a".."f");
+say "";
+
+# -----------------------------------------------------------------
+# JSON Serialization
+# -----------------------------------------------------------------
+say "--- JSON Serialization --------------------------------------";
+say "";
+
+let data = {
+    name => "CRISP",
+    version => "0.1.5",
+    features => ["oop", "regex", "json", "networking"],
+    nested => { x => 10, y => 20, enabled => true }
+};
+say "Original data:";
+say "  " + data;
+say "";
+
+let json_str = to_json(data);
+say "to_json():";
+say "  " + json_str;
+say "";
+
+say "to_json_pretty():";
+say to_json_pretty(data);
+say "";
+
+say "json_valid() — check if string is valid JSON:";
+say "  json_valid('{\"a\":1}')  → " + json_valid('{"a":1}');
+say "  json_valid('not json')   → " + json_valid("not json");
+say "  json_valid('[1,2,3]')    → " + json_valid("[1,2,3]");
+say "";
+
+say "from_json() — parse JSON string:";
+let parsed = from_json('{"x": 10, "y": 20, "label": "point"}');
+say "  parsed.x     → " + parsed.x;
+say "  parsed.y     → " + parsed.y;
+say "  parsed.label → " + parsed.label;
+say "";
+
+# -----------------------------------------------------------------
+# Regex
+# -----------------------------------------------------------------
+say "--- Regex ---------------------------------------------------";
+say "";
+
+let text = "The quick brown fox jumps over the lazy dog";
+say "text = '" + text + "'";
+say "";
+
+say "regex_match():";
+say "  regex_match(text, 'fox')         → " + regex_match(text, "fox");
+say "  regex_match(text, '^The')        → " + regex_match(text, "^The");
+say "  regex_match(text, 'cat')         → " + regex_match(text, "cat");
+say "";
+
+say "regex_replace():";
+say "  regex_replace(text, 'o', '0')    → " + regex_replace(text, "o", "0");
+say "";
+
+say "regex_split():";
+let csv = "a,b;c:d";
+say "  regex_split('" + csv + "', '[,;:]') → " + regex_split(csv, "[,;:]");
+say "";
+
+say "regex_find_all():";
+say "  regex_find_all(text, '\\\\w{4}')    → " + regex_find_all(text, "\\w{4}");
+say "";
+
+say "regex_capture() — capture groups:";
+let name_age = "Alice, 30";
+let caps = regex_capture(name_age, "(\\w+), (\\d+)");
+say "  regex_capture('Alice, 30', '(\\\\w+), (\\\\d+)')";
+say "    caps[1] → " + caps[1];
+say "    caps[2] → " + caps[2];
+say "";
+
+# -----------------------------------------------------------------
+# Time Functions
+# -----------------------------------------------------------------
+say "--- Time Functions ------------------------------------------";
+say "";
+
+say "time()         → " + time() + "  (Unix timestamp, seconds)";
+say "timestamp()    → " + timestamp() + "  (milliseconds)";
+say "datetime()     → " + datetime() + "  (local)";
+say "datetime_utc() → " + datetime_utc() + "  (UTC)";
+say "";
+
+say "strftime() — format a timestamp:";
+let now = time();
+say "  strftime('%Y-%m-%d', now)        → " + strftime("%Y-%m-%d", now);
+say "  strftime('%H:%M:%S', now)        → " + strftime("%H:%M:%S", now);
+say "";
+
+say "strptime() — parse a date string:";
+let ts = strptime("2026-01-15", "%Y-%m-%d");
+say "  strptime('2026-01-15', '%Y-%m-%d') → " + ts;
+say "";
+
+# -----------------------------------------------------------------
+# Crypto
+# -----------------------------------------------------------------
+say "--- Crypto --------------------------------------------------";
+say "";
+
+let msg2 = "CRISP";
+say "Hashing '" + msg2 + "':";
+say "  md5('" + msg2 + "')       → " + md5(msg2);
+say "  sha1('" + msg2 + "')      → " + sha1(msg2);
+say "  sha256('" + msg2 + "')    → " + sha256(msg2);
+say "  (sha512 truncated)        → " + sha512(msg2)[0..31] + "...";
+say "";
+
+say "Base64:";
+say "  base64_encode('" + msg2 + "')  → " + base64_encode(msg2);
+say "  base64_decode('" + base64_encode(msg2) + "') → " + base64_decode(base64_encode(msg2));
+say "";
+
+say "random_bytes(8)  → " + random_bytes(8);
+say "random_bytes(16) → " + random_bytes(16);
+say "";
+
+# -----------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------
+say "--- Testing -------------------------------------------------";
+say "";
+
+say "assert_eq(2 + 2, 4):";
+assert_eq(2 + 2, 4);
+say "  ✅ passed";
+say "";
+
+say "assert_ne(1, 2):";
+assert_ne(1, 2);
+say "  ✅ passed";
+say "";
+
+say "assert_true(1 < 5):";
+assert_true(1 < 5);
+say "  ✅ passed";
+say "";
+
+say "assert_false(0 > 10):";
+assert_false(0 > 10);
+say "  ✅ passed";
+say "";
+
+say "assert_eq with custom message:";
+assert_eq(pow(2, 3), 8, "pow(2,3) should be 8");
+say "  ✅ passed";
+say "";
+
+say "assert_throws():";
+fn will_fail() { die "expected error"; }
+assert_throws(will_fail);
+say "  ✅ will_fail() threw as expected";
+say "";
+
+# -----------------------------------------------------------------
+# Lambda Functions
+# -----------------------------------------------------------------
+say "--- Lambda Functions ---------------------------------------";
+say "";
+
+let square = |x| => x * x;
+say "let square = |x| => x * x;";
+say "  square(5)  → " + square(5);
+say "  square(12) → " + square(12);
+say "";
+
+let add = |a, b| => a + b;
+say "let add = |a, b| => a + b;";
+say "  add(3, 7) → " + add(3, 7);
+say "";
+
+let greet_lambda = |name, greeting| => greeting + ", " + name + "!";
+say "let greet = |name, g| => g + ', ' + name + '!';";
+say "  greet('CRISP', 'Hello') → " + greet_lambda("CRISP", "Hello");
+say "";
+
+# Higher-order function
+fn apply_twice(func, x) {
+    return func(func(x));
+}
+say "fn apply_twice(func, x) { return func(func(x)); }";
+say "  apply_twice(|x| => x * 2, 5) → " + apply_twice(|x| => x * 2, 5);
+say "";
+
+# -----------------------------------------------------------------
+# Named Functions & Recursion
+# -----------------------------------------------------------------
+say "--- Named Functions & Recursion -----------------------------";
+say "";
+
+fn factorial(n) {
+    if n <= 1 { return 1; };
+    return n * factorial(n - 1);
+}
+say "fn factorial(n) { ... }";
+say "  factorial(5)  → " + factorial(5);
+say "  factorial(10) → " + factorial(10);
+say "";
+
+fn fibonacci(n) {
+    if n <= 1 { return n; };
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+say "fn fibonacci(n) { ... }";
+say "  fibonacci(10) → " + fibonacci(10);
+say "  fibonacci(15) → " + fibonacci(15);
+say "";
+
+# -----------------------------------------------------------------
+# Control Flow
+# -----------------------------------------------------------------
+say "--- Control Flow --------------------------------------------";
+say "";
+
+say "if / else if / else:";
+let score = 85;
+if score >= 90 {
+    say "  Grade: A";
+} else if score >= 80 {
+    say "  Grade: B (score=" + score + ")";
+} else {
+    say "  Grade: C or lower";
+}
+say "";
+
+say "ternary operator:";
+let age = 20;
+let status = (age >= 18 ? "adult" : "minor");
+say "  age=20 → status='" + status + "'";
+say "";
+
+say "spaceship operator <=>:";
+say "  1 <=> 2 → " + (1 <=> 2);    # -1
+say "  2 <=> 2 → " + (2 <=> 2);    #  0
+say "  3 <=> 2 → " + (3 <=> 2);    #  1
+say "";
+
+say "while loop:";
+let i = 0;
+let while_result = [];
+while i < 5 {
+    while_result.push(i * 10);
+    i = i + 1;
+}
+say "  while_result → " + while_result;
+say "";
+
+say "for loop:";
+let for_result = [];
+for n in 1..6 {
+    for_result.push(n * n);
+}
+say "  squares 1..5 → " + for_result;
+say "";
+
+say "break / continue:";
+let filtered = [];
+for n in 0..8 {
+    if n == 3 { continue; }
+    if n == 6 { break; }
+    filtered.push(n);
+}
+say "  skip 3, stop at 6 → " + filtered;
+say "";
+
+# -----------------------------------------------------------------
+# Try/Catch/Finally
+# -----------------------------------------------------------------
+say "--- Try/Catch/Finally (Error Handling) ----------------------";
+say "";
+
+say "try/catch — basic:";
+try {
+    let x = 1 / 0;
+} catch e {
+    say "  Caught: " + e;
+}
+say "";
+
+say "throw — catchable user error:";
+try {
+    throw "something went wrong";
+} catch e as err {
+    say "  Caught: " + err;
+}
+say "";
+
+say "try/catch/finally — cleanup always runs:";
+try {
+    say "  inside try block";
+} catch e {
+    say "  inside catch: " + e;
+} finally {
+    say "  inside finally — always executes!";
+}
+say "";
+
+say "finally runs even after throw:";
+try {
+    try {
+        throw "inner error";
+    } finally {
+        say "  inner finally (before re-throw)";
+    };
+} catch e {
+    say "  outer catch: " + e;
+}
+say "";
+
+# -----------------------------------------------------------------
+# Match with Guards
+# -----------------------------------------------------------------
+say "--- Match with Guards ---------------------------------------";
+say "";
+
+say "Pattern matching:";
+let value = 42;
+match value {
+    1  => { say "  one"; }
+    42 => { say "  the answer to everything"; }
+    _  => { say "  something else"; }
+}
+say "";
+
+say "Match with where guards:";
+let input = "123";
+match input {
+    n where type(n) == "int" => {
+        say "  Integer: " + n;
+    }
+    s where s.len() > 5 => {
+        say "  Long string: " + s;
+    }
+    s where s == "" => {
+        say "  Empty string";
+    }
+    _ => {
+        say "  Short string: " + input;
+    }
+}
+say "";
+
+# -----------------------------------------------------------------
+# OOP: Classes
+# -----------------------------------------------------------------
+say "--- OOP: Classes --------------------------------------------";
+say "";
+
+class Point {
+    fn new(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn move_to(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn distance() {
+        return sqrt(pow(self.x, 2) + pow(self.y, 2));
+    }
+
+    fn describe() {
+        return "Point(" + self.x + ", " + self.y + ")";
+    }
+}
+
+let p = new Point(3, 4);
+say "let p = new Point(3, 4);";
+say "  p.x         → " + p.x;
+say "  p.y         → " + p.y;
+say "  p.describe()→ " + p.describe();
+say "  p.distance()→ " + p.distance();
+say "";
+
+p.move_to(6, 8);
+say "p.move_to(6, 8);";
+say "  p.distance()→ " + p.distance();
+say "";
+
+say "Auto-instantiation: Class.method() → new object + call method:";
+let p2 = Point.new(5, 12);
+say "  Point.new(5, 12).distance() → " + p2.distance();
+say "";
+
+class Point3D extends Point {
+    fn new(x, y, z) {
+        super(x, y);
+        self.z = z;
+    }
+
+    fn distance() {
+        let d2d = super.distance();
+        return sqrt(pow(d2d, 2) + pow(self.z, 2));
+    }
+
+    fn describe() {
+        return "Point3D(" + self.x + ", " + self.y + ", " + self.z + ")";
+    }
+}
+
+let p3 = new Point3D(3, 4, 12);
+say "let p3 = new Point3D(3, 4, 12);";
+say "  p3.describe() → " + p3.describe();
+say "  p3.distance() → " + p3.distance();
+say "";
+
+class MathUtil {
+    static fn square(x) { return x * x; }
+    static fn cube(x) { return x * x * x; }
+}
+say "Static methods:";
+say "  MathUtil.square(7) → " + MathUtil.square(7);
+say "  MathUtil.cube(3)   → " + MathUtil.cube(3);
+say "";
+
+# -----------------------------------------------------------------
+# Process Management
+# -----------------------------------------------------------------
+say "--- Process Management --------------------------------------";
+say "";
+
+say "pid() → " + pid();
+say "system('echo', 'hello from system') → ";
+let exit_code = system("echo", "  hello from system");
+say "  exit code: " + exit_code;
+say "";
+
+say "qx() — capture command output:";
+let date_output = qx("date");
+say "  qx('date') → " + date_output;
+say "";
+
+# -----------------------------------------------------------------
+# File I/O
+# -----------------------------------------------------------------
+say "--- File I/O ------------------------------------------------";
+say "";
+
+say "file_exists():";
+say "  file_exists('quadratic.csp') → " + file_exists("quadratic.csp");
+say "  file_exists('nonexistent.txt') → " + file_exists("nonexistent.txt");
+say "";
+
+say "write_file() / read_file():";
+write_file("/tmp/crisp_demo.txt", "Hello from CRISP stdlib demo!\nLine 2\nLine 3");
+say "  wrote /tmp/crisp_demo.txt";
+let content = read_file("/tmp/crisp_demo.txt");
+say "  read: " + content;
+say "  file_exists('/tmp/crisp_demo.txt') → " + file_exists("/tmp/crisp_demo.txt");
+say "";
+
+# -----------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------
+say "╔══════════════════════════════════════════════════════════╗";
+say "║          ✅ Standard Library Demo Complete               ║";
+say "╚══════════════════════════════════════════════════════════╝";
+say "";
+say "Modules demonstrated:";
+say "  • Console I/O     (print, say, warn, readline, read, input)";
+say "  • Type Conversion (int, float, type)";
+say "  • Math            (sqrt, pow, abs, min, max, rand, PI, E, TAU)";
+say "  • Strings         (len, contains, split, join, concat, repeat)";
+say "  • Arrays          (push, pop, shift, unshift, map, filter, take, zip)";
+say "  • Hashes          (dot access, keys, values, len)";
+say "  • Slicing/Ranges  (arr[1..3], 1..10, 'a'..'z')";
+say "  • JSON            (to_json, from_json, to_json_pretty, json_valid)";
+say "  • Regex           (match, replace, split, find_all, capture)";
+say "  • Time            (time, timestamp, datetime, strftime, strptime)";
+say "  • Crypto          (md5, sha1/256/512, base64, random_bytes)";
+say "  • Testing         (assert_eq/ne/true/false, assert_throws)";
+say "  • Lambdas         (|x| => expr, higher-order functions)";
+say "  • Recursion       (factorial, fibonacci)";
+say "  • Control Flow    (if/else, ternary, spaceship, while, for, break)";
+say "  • Error Handling  (try/catch/finally, throw, die)";
+say "  • Pattern Match   (match with where guards)";
+say "  • OOP             (class, extends, super, self, static methods)";
+say "  • Processes       (system, qx, pid)";
+say "  • File I/O        (read_file, write_file, file_exists)";
