@@ -1,0 +1,189 @@
+% --- Chapter: Control Flow ---
+\section{Control Flow}
+
+\subsection{Conditional Statements}
+
+CRISP supports \texttt{if}, \texttt{else if}, and \texttt{else} with block bodies:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Conditional Statements}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Basic if/else
+let x = 42;
+if x > 100 {
+    say "Large";
+} else {
+    say "Small";
+}
+
+# if/else if/else chain
+let score = 85;
+if score >= 90 {
+    say "A";
+} else if score >= 80 {
+    say "B";
+} else if score >= 70 {
+    say "C";
+} else {
+    say "F";
+}
+
+# Single-expression conditions
+let name = "CRISP";
+if name == "CRISP" {
+    say "It's CRISP!";
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{While Loops}
+
+The \texttt{while} loop evaluates a condition before each iteration:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{While Loops}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Basic while loop
+let i = 0;
+while i < 5 {
+    say i;
+    i = i + 1;
+}
+# Output: 0 1 2 3 4
+
+# Infinite loop with break
+let count = 0;
+while true {
+    say count;
+    count = count + 1;
+    if count >= 5 { break; }
+}
+# Output: 0 1 2 3 4
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{For Loops}
+
+The \texttt{for} loop iterates over arrays, hashes, strings, and ranges:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{For Loops}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# For loop over array
+let @fruits = ["apple", "banana", "cherry"];
+for fruit in @fruits {
+    say fruit;
+}
+# Output: apple banana cherry
+
+# For loop over range
+for i in 0..5 {
+    say i;
+}
+# Output: 0 1 2 3 4
+
+# For loop over hash (iterates values)
+let %ages = { alice => 25, bob => 30 };
+for age in %ages {
+    say age;
+}
+# Output: 25 30
+
+# For loop over string (iterates characters)
+for ch in "CRISP" {
+    say ch;
+}
+# Output: C R I S P
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Break and Continue}
+
+\texttt{break} exits the loop immediately. \texttt{continue} skips to the next iteration:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Break and Continue}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Break — exit loop early
+let i = 0;
+while true {
+    say i;
+    i = i + 1;
+    if i >= 5 { break; }
+}
+# Output: 0 1 2 3 4
+
+# Continue — skip to next iteration
+for i in 0..10 {
+    if i % 2 == 0 { continue; }  # skip evens
+    say i;
+}
+# Output: 1 3 5 7 9
+
+# Both together
+for i in 0..10 {
+    if i == 2 { continue; }
+    if i == 7 { break; }
+    say i;
+}
+# Output: 0 1 3 4 5 6
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Control Flow and Try/Finally}
+
+\texttt{break} and \texttt{continue} propagate correctly through \texttt{try/finally} — the \texttt{finally} block always executes before the signal propagates:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Break with Finally}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+while true {
+    try {
+        say "inside try";
+        break;
+    } finally {
+        say "finally runs!";
+    }
+}
+# Output:
+# inside try
+# finally runs!
+
+# continue also respects finally
+for i in 0..3 {
+    try {
+        if i == 1 { continue; }
+        say "processing ", i;
+    } finally {
+        say "cleanup for ", i;
+    }
+}
+# Output:
+# processing 0 / cleanup for 0
+# cleanup for 1
+# processing 2 / cleanup for 2
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Return Statement}
+
+\texttt{return} exits a function with an optional value. It uses a sentinel error internally to unwind the call stack:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Return Statement}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Return with value
+fn add(a, b) {
+    return a + b;
+}
+
+# Early return from condition
+fn abs(x) {
+    if x >= 0 { return x; }
+    return -x;
+}
+
+# Return without value (returns null)
+fn do_nothing() {
+    return;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Control Flow Signals}}, fonttitle=\bfseries, sharp corners]
+\texttt{return}, \texttt{break}, and \texttt{continue} are implemented as sentinel errors (\texttt{RuntimeError::ReturnSignal}, \texttt{BreakSignal}, \texttt{ContinueSignal}) that unwind through the call stack. This ensures they propagate correctly through nested structures like \texttt{if}, \texttt{match}, \texttt{try/catch}, and \texttt{for} loops. Using \texttt{break} or \texttt{continue} outside a loop produces a runtime error.
+\end{tcolorbox}

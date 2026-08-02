@@ -1,0 +1,180 @@
+% --- Chapter: Time and Date Functions ---
+\section{Time and Date Functions}
+
+Working with time is essential in scripting: timestamps for logging, date formatting for reports, scheduling, and measuring elapsed time. CRISP provides six time functions that cover Unix timestamps, human-readable dates, formatting, and parsing—all without external dependencies.
+
+\subsection{Getting the Current Time}
+
+Three functions return the current time at different resolutions:
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Time Functions}}
+\vspace{0.3em}
+\begin{tabular}{@{}lllp{6cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Returns}} & \textbf{\textcolor{white}{Resolution}} & \textbf{\textcolor{white}{Example Output}} \\
+\midrule
+\texttt{time()} & Int & Seconds & \texttt{1784987128} \\
+\texttt{timestamp()} & Int & Milliseconds & \texttt{1784987128638} \\
+\texttt{datetime()} & String & Seconds & \texttt{"2026-07-25 15:45:28"} \\
+\texttt{datetime\_utc()} & String & Seconds & \texttt{"2026-07-25 13:45:28 UTC"} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Basic Time Functions}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Unix timestamp — seconds since epoch (Jan 1, 1970)
+let now = time();
+say "Seconds since epoch: " + now;
+
+# Millisecond timestamp — for high-resolution timing
+let ms = timestamp();
+say "Milliseconds since epoch: " + ms;
+
+# Human-readable local time
+say "Local: " + datetime();
+# "Local: 2026-07-25 15:45:28"
+
+# Human-readable UTC time
+say "UTC:   " + datetime_utc();
+# "UTC:   2026-07-25 13:45:28 UTC"
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{Formatting Dates}
+
+\texttt{strftime} formats a Unix timestamp into a human-readable string using format specifiers. This is the same \texttt{strftime} familiar to C, Perl, and Python programmers:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Formatting with strftime}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let now = time();
+
+# Common formats
+say strftime("%Y-%m-%d", now);           # 2026-07-25  (ISO date)
+say strftime("%H:%M:%S", now);           # 15:45:28    (time)
+say strftime("%Y-%m-%d %H:%M:%S", now);  # 2026-07-25 15:45:28 (datetime)
+say strftime("%A, %B %d, %Y", now);      # Saturday, July 25, 2026
+say strftime("%I:%M %p", now);           # 03:45 PM    (12-hour)
+
+# Custom log format
+say strftime("[%Y-%m-%d %H:%M:%S]", now) + " Server started";
+# [2026-07-25 15:45:28] Server started
+\end{lstlisting}
+\end{tcolorbox}
+
+\vspace{1.5cm}
+\subsection{Parsing Dates}
+
+\texttt{strptime} does the reverse: it parses a date string into a Unix timestamp using the same format specifiers:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Parsing with strptime}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Parse a date string into a timestamp
+let ts = strptime("2026-01-15", "%Y-%m-%d");
+say ts;  # 1768435200 (Unix timestamp for Jan 15, 2026)
+
+# Verify by formatting back
+say strftime("%A, %B %d, %Y", ts);
+# Thursday, January 15, 2026
+
+# Parse a full datetime
+let ts2 = strptime("2026-07-25 15:45:28", "%Y-%m-%d %H:%M:%S");
+say ts2;  # should match time()
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{A Complete Example: Elapsed Time Calculator}
+
+Measuring how long something takes is a classic scripting task. Here is a program that times a computation and reports the result in human-readable form:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Elapsed Time Calculator (timer.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# timer.csp — Measure and display elapsed time
+
+fn elapsed(start_ms, end_ms) {
+    let diff_ms = end_ms - start_ms;
+
+    if diff_ms < 1000 {
+        return diff_ms + " ms";
+    }
+
+    let seconds = diff_ms / 1000.0;
+
+    if seconds < 60 {
+        return seconds + " seconds";
+    }
+
+    let minutes = int(seconds / 60.0);
+    let secs_left = seconds - (minutes * 60.0);
+    return minutes + " min " + secs_left + " sec";
+}
+
+# Time a computation
+say "Computing factorial(20)...";
+let start = timestamp();
+
+let result = 1;
+let i = 1;
+while i <= 20 {
+    result = result * i;
+    i = i + 1;
+}
+
+let end = timestamp();
+
+say "factorial(20) = " + result;
+say "Took: " + elapsed(start, end);
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{Date Arithmetic}
+
+Here is a practical program that computes age from a birth date and determines the day of the week someone was born:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Date Arithmetic (age\_calculator.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# age_calculator.csp — Compute age and birth day-of-week
+
+fn calculate_age(birth_date_str) {
+    let birth_ts = strptime(birth_date_str, "%Y-%m-%d");
+    let now_ts = time();
+
+    # Seconds in a year (approximate)
+    let seconds_per_year = 365.25 * 24 * 60 * 60;
+    let age = int((now_ts - birth_ts) / seconds_per_year);
+
+    let day_of_week = strftime("%A", birth_ts);
+
+    return {
+        age => age,
+        day_of_week => day_of_week,
+        birth_date => strftime("%B %d, %Y", birth_ts)
+    };
+}
+
+let info = calculate_age("1990-05-15");
+say "Born: " + info.birth_date;
+say "Day of week: " + info.day_of_week;
+say "Age: " + info.age + " years";
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Why strftime/strptime?}}, fonttitle=\bfseries, sharp corners]
+CRISP delegates date formatting and parsing to the C standard library's \texttt{strftime} and \texttt{strptime} functions. This is a deliberate choice:
+
+\begin{itemize}
+    \item \textbf{Familiarity:} The format specifiers (\texttt{\%Y}, \texttt{\%m}, \texttt{\%d}, \texttt{\%H}, \texttt{\%M}, \texttt{\%S}) are identical to C, Perl, Python, Ruby, and PHP. Anyone who has formatted dates in any of these languages already knows CRISP's date formatting.
+    \item \textbf{Locale-aware:} \texttt{\%A} produces the correct weekday name for the system's locale. On a Czech system, \texttt{strftime("\%A", ts)} returns ``pondělí'', not ``Monday''.
+    \item \textbf{No dependencies:} Using the C standard library means zero additional crates, zero build time, and zero security vulnerabilities from third-party date libraries.
+\end{itemize}
+
+The trade-off is that \texttt{strptime} is not available on Windows (it's a POSIX extension). For cross-platform date parsing, future CRISP releases will provide a pure-Rust alternative.
+\end{tcolorbox}

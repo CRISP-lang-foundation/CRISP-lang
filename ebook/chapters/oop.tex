@@ -1,0 +1,166 @@
+% --- Chapter: Object-Oriented Programming ---
+\section{Object-Oriented Programming}
+
+CRISP v0.1.5 introduces Python/Perl-style object-oriented programming with classes, constructors, inheritance, and static methods. OOP in CRISP is prototype-free and class-based, with clean syntax modeled on modern dynamic languages.
+
+\subsection{Defining a Class}
+
+A class is defined with the \texttt{class} keyword. Methods are defined with \texttt{fn} inside the class body. The special \texttt{new} method is the constructor:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Class Definition}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Point {
+    fn new(x, y) {
+        self.x = x;
+        self.y = y;
+    }
+
+    fn distance() {
+        return sqrt(pow(self.x, 2) + pow(self.y, 2));
+    }
+
+    fn describe() {
+        return "Point(" + self.x + ", " + self.y + ")";
+    }
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Creating Objects}
+
+Objects are created with the \texttt{new} keyword, which calls the constructor:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Creating Objects}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+let p = new Point(3, 4);
+
+say p.x;           # 3
+say p.y;           # 4
+say p.distance();  # 5
+say p.describe();  # Point(3, 4)
+
+# Mutate fields directly
+p.x = 10;
+say p.distance();  # sqrt(100 + 16) = 10.77...
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Class.method() Auto-Instantiation}
+
+Calling a method on a class (not an instance) auto-creates an object. This is syntactic sugar that calls \texttt{new} with the arguments, then calls the method:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Auto-Instantiation}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# These are equivalent:
+let p1 = Point.new(5, 12);  # explicit new
+let p2 = new Point(5, 12);  # contextual new keyword
+
+say p1.distance();  # 13
+say p2.distance();  # 13
+
+# Auto-instantiation works for ANY method, not just new:
+let p3 = Point.move_to(6, 8);  # creates Point(0,0), moves to (6,8)
+say p3.describe();  # Point(6, 8)
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Inheritance}
+
+Classes can extend other classes with the \texttt{extends} keyword. Child classes inherit all methods and fields from the parent:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Inheritance}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Point3D extends Point {
+    fn new(x, y, z) {
+        super(x, y);      # call parent constructor
+        self.z = z;
+    }
+
+    fn distance() {
+        let d2d = super.distance();  # call parent method
+        return sqrt(pow(d2d, 2) + pow(self.z, 2));
+    }
+
+    fn describe() {
+        return "Point3D(" + self.x + ", " + self.y +
+               ", " + self.z + ")";
+    }
+}
+
+let p3 = new Point3D(3, 4, 12);
+say p3.describe();  # Point3D(3, 4, 12)
+say p3.distance();  # sqrt(3²+4²+12²) = 13
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Super Calls}
+
+\texttt{super(args...)} calls the parent class constructor. \texttt{super.method(args...)} calls a parent method:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Super Calls}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class Animal {
+    fn new(name, age) {
+        self.name = name;
+        self.age = age;
+    }
+
+    fn speak() {
+        say self.name + " makes a sound";
+    }
+
+    fn birthday() {
+        self.age = self.age + 1;
+        say self.name + " turned " + self.age + "!";
+    }
+}
+
+class Dog extends Animal {
+    fn new(name, age, breed) {
+        super(name, age);       # Animal.new(name, age)
+        self.breed = breed;
+    }
+
+    fn speak() {
+        say self.name + " barks!";  # override
+    }
+}
+
+let rex = new Dog("Rex", 3, "German Shepherd");
+rex.speak();      # Rex barks!
+rex.birthday();   # Rex turned 4!  (inherited from Animal)
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Static Methods}
+
+Static methods are defined with \texttt{static fn} and are called on the class (not instances). They don't have access to \texttt{self}:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Static Methods}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+class MathUtil {
+    static fn square(x) { return x * x; }
+    static fn cube(x)   { return x * x * x; }
+}
+
+say MathUtil.square(7);  # 49
+say MathUtil.cube(3);    # 27
+
+# Static methods can't be called on instances
+let m = new MathUtil();
+# m.square(5);  # Error — static methods are class-only
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: OOP Implementation}}, fonttitle=\bfseries, sharp corners]
+CRISP's OOP system is implemented as a thin layer over hashes:
+
+\begin{itemize}
+    \item \textbf{Classes:} Stored as \texttt{Value::Class \{ name, parent, methods, static\_methods \}} in the environment. A class is a value like any other—it can be assigned to variables, passed to functions, and inspected.
+    \item \textbf{Objects:} Stored as \texttt{Value::Object \{ class, fields, methods \}}. The object carries a copy of its class's methods (snapshotted at construction time) and a reference to the class name for inheritance chain lookups.
+    \item \textbf{Inheritance:} Method resolution walks the parent chain at call time. \texttt{super} calls skip the current class and start at the parent, preventing infinite recursion.
+    \item \textbf{Self:} Bound automatically by \texttt{call\_method} when dispatching. \texttt{self} is a special variable injected into the method's environment.
+\end{itemize}
+
+This design keeps the interpreter simple while providing the full OOP experience—constructors, inheritance, method dispatch, and static methods—all built on CRISP's existing hash and function primitives.
+\end{tcolorbox}

@@ -1,0 +1,181 @@
+% --- Chapter: Pattern Matching ---
+\section{Pattern Matching}
+
+CRISP supports Rust-style pattern matching with the \texttt{match} expression. Patterns can be literal values, variable bindings, or wildcards, with optional \texttt{where} guards.
+
+\subsection{Basic Matching}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Basic Match}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Simple value matching
+let value = 42;
+match value {
+    0  => { say "zero"; }
+    1  => { say "one"; }
+    42 => { say "the answer"; }
+    _  => { say "something else"; }
+}
+# Output: the answer
+
+# Default case with wildcard
+let x = 99;
+match x {
+    1  => { say "one"; }
+    2  => { say "two"; }
+    _  => { say "unknown: ", x; }
+}
+# Output: unknown: 99
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Pattern Types}
+
+CRISP supports the following match patterns:
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Match Pattern Types}}
+\vspace{0.3em}
+\begin{tabular}{@{}lllp{5cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Pattern}} & \textbf{\textcolor{white}{Syntax}} & \textbf{\textcolor{white}{Example}} & \textbf{\textcolor{white}{Matches}} \\
+\midrule
+Integer & \texttt{42} & \texttt{42 => ...} & Exact integer equality \\
+String & \texttt{"hello"} & \texttt{"hello" => ...} & Exact string equality \\
+Boolean & \texttt{true}, \texttt{false} & \texttt{true => ...} & Exact boolean match \\
+Variable & \texttt{name} & \texttt{n => ...} & Any value, binds to name \\
+Wildcard & \texttt{\_} & \texttt{\_ => ...} & Any value, no binding \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Pattern Types}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Integer patterns
+match 42 {
+    0  => { say "zero"; }
+    42 => { say "the answer"; }
+    _  => { say "other"; }
+}
+
+# String patterns
+match "hello" {
+    "hello" => { say "greeting"; }
+    "bye"   => { say "farewell"; }
+    _       => { say "unknown"; }
+}
+
+# Boolean patterns
+match true {
+    true  => { say "yes"; }
+    false => { say "no"; }
+}
+
+# Variable binding — matches anything, binds to name
+match readline("Enter: ") {
+    n => { say "you entered: ", n; }
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Where Guards}
+
+\texttt{where} guards add conditions to pattern arms. The guard expression is evaluated after the pattern matches, and the arm only fires if the guard is true:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Where Guards}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Type-based dispatch
+let guess = read("Your guess: ");
+
+match guess {
+    n where type(n) == "int" => {
+        say "Integer: ", n;
+    }
+    s where s == "" => {
+        say "Empty input.";
+    }
+    _ => {
+        say "Something else: ", guess;
+    }
+}
+
+# Range-based guards
+let score = 85;
+match score {
+    s where s >= 90 => { say "A"; }
+    s where s >= 80 => { say "B"; }
+    s where s >= 70 => { say "C"; }
+    s where s >= 60 => { say "D"; }
+    _               => { say "F"; }
+}
+# Output: B
+
+# Complex guard expression
+let x = 15;
+match x {
+    n where n > 0 && n % 2 == 0 => { say "positive even"; }
+    n where n > 0               => { say "positive odd"; }
+    n where n < 0               => { say "negative"; }
+    _                           => { say "zero"; }
+}
+# Output: positive odd
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Multi-Statement Arm Bodies}
+
+Each arm body can contain multiple statements. The match expression returns the value of the last statement in the matched arm:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Multi-Statement Arms}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+match value {
+    1 => {
+        say "processing one...";
+        say "done!";
+    }
+    2 => {
+        let doubled = 2 * 2;
+        say "doubled: ", doubled;
+    }
+    _ => {
+        say "fallback";
+    }
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Break and Continue in Match Arms}
+
+\texttt{break} and \texttt{continue} propagate correctly from inside \texttt{match} arms when the \texttt{match} is inside a loop:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Match Inside Loops}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# break from match inside while
+let i = 0;
+while true {
+    i = i + 1;
+    match i {
+        n where n >= 5 => { break; }
+        _ => { say i; }
+    }
+}
+# Output: 1 2 3 4
+
+# continue from match inside for
+for i in 0..5 {
+    match i {
+        n where n % 2 == 0 => { continue; }
+        _ => { say i; }
+    }
+}
+# Output: 1 3
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Match Evaluation}}, fonttitle=\bfseries, sharp corners]
+  Match arms are evaluated in order from top to bottom. The first arm whose pattern matches and whose guard (if present) evaluates to \texttt{true} wins. Only that arm's body executes. There is no fall-through between arms.
+  
+For variable-binding patterns with guards, the variable is bound in a temporary scope that includes the guard expression and the arm body. This ensures guard expressions can reference the bound variable without leaking into the outer scope.
+\end{tcolorbox}

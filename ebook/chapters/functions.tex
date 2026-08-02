@@ -1,0 +1,188 @@
+% --- Chapter: Functions and Closures ---
+\section{Functions and Closures}
+
+\subsection{Named Functions}
+
+CRISP supports named function definition with the \texttt{fn} keyword. Functions are first-class values stored in the environment, enabling recursion and self-reference:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Named Functions}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Basic function definition
+fn greet(name) {
+    say "Hello, ", name, "!";
+}
+
+greet("CRISP");  # Hello, CRISP!
+
+# Function with return value
+fn add(a, b) {
+    return a + b;
+}
+
+let result = add(3, 7);
+say result;  # 10
+
+# Early return
+fn abs(x) {
+    if x >= 0 {
+        return x;
+    }
+    return -x;
+}
+
+say abs(-42);  # 42
+say abs(42);   # 42
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Function Parameters}
+
+Functions accept positional parameters. Each parameter is bound to the corresponding argument at call time:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Function Parameters}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Multiple parameters
+fn distance(x1, y1, x2, y2) {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    return sqrt(dx * dx + dy * dy);
+}
+
+# Parameters with sigils (type annotation)
+fn process(@arr, %opts) {
+    say "Array: ", @arr;
+    say "Options: ", %opts;
+}
+
+process([1, 2, 3], { debug => true });
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Recursion}
+
+Functions are recursive with a maximum depth of 1000 calls. The function name is available inside its own body via self-reference:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Recursion}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Factorial — classic recursion
+fn factorial(n) {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+say factorial(5);   # 120
+say factorial(10);  # 3628800
+
+# Fibonacci
+fn fib(n) {
+    if n <= 1 { return n; }
+    return fib(n - 1) + fib(n - 2);
+}
+
+say fib(10);  # 55
+
+# Mutual recursion
+fn is_even(n) {
+    if n == 0 { return true; }
+    return is_odd(n - 1);
+}
+
+fn is_odd(n) {
+    if n == 0 { return false; }
+    return is_even(n - 1);
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Lambda Functions}
+
+Lambdas are anonymous functions defined with pipe syntax. They come in two forms: expression-body (implicit return) and block-body (explicit return):
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Lambda Functions}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Expression-body lambda (implicit return)
+let double = |x| => x * 2;
+say double(10);  # 20
+
+# Block-body lambda (explicit return)
+let square = |x| => {
+    let result = x * x;
+    return result;
+};
+say square(5);  # 25
+
+# Multiple parameters
+let add = |a, b| => a + b;
+say add(3, 7);  # 10
+
+# Lambda as argument
+let numbers = [1, 2, 3, 4, 5];
+let squared = map(numbers, |n| => n * n);
+say squared;  # [1, 4, 9, 16, 25]
+
+# Lambda capturing outer variables
+let factor = 10;
+let scale = |x| => x * factor;
+say scale(5);  # 50
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Closures}
+
+Functions capture their lexical environment at definition time. Each function call creates a fresh environment that chains to the captured parent:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Closures}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Counter factory — returns a closure
+fn make_counter(start) {
+    return || => {
+        let current = start;
+        start = start + 1;
+        return current;
+    };
+}
+
+let counter1 = make_counter(0);
+let counter2 = make_counter(100);
+
+say counter1();  # 0
+say counter1();  # 1
+say counter1();  # 2
+say counter2();  # 100
+say counter2();  # 101
+
+# Each closure has its own captured environment
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Functions as Values}
+
+Functions are first-class values: they can be stored in variables, passed as arguments, and returned from other functions:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{First-Class Functions}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Assign function to variable
+let greet = fn(name) {
+    return "Hello, " + name + "!";
+};
+say greet("CRISP");  # Hello, CRISP!
+
+# Pass function as argument
+fn apply_twice(f, x) {
+    return f(f(x));
+}
+
+let inc = |x| => x + 1;
+say apply_twice(inc, 5);  # 7 (inc(inc(5)) = inc(6) = 7)
+
+# Return function from function
+fn multiplier(factor) {
+    return |x| => x * factor;
+}
+
+let triple = multiplier(3);
+say triple(10);  # 30
+\end{lstlisting}
+\end{tcolorbox}

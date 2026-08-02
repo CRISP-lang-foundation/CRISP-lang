@@ -1,0 +1,188 @@
+% --- Chapter: String Processing ---
+\section{String Processing}
+
+CRISP inherits Perl's strength in text manipulation. Strings are first-class values with rich built-in methods and a flexible set of operators. This section presents four classic string-processing programs that demonstrate CRISP's capabilities.
+
+\subsection{String Reversal}
+
+Reversing a string is the ``hello world'' of string algorithms. Here are three approaches, from manual to idiomatic:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{String Reversal (reverse\_string.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# reverse_string.csp — Three ways to reverse a string
+
+fn reverse_iterative(s) {
+    let result = "";
+    let i = s.len() - 1;
+    while i >= 0 {
+        result = result + s[i];
+        i = i - 1;
+    }
+    return result;
+}
+
+fn reverse_for(s) {
+    let result = "";
+    for ch in s {
+        result = ch + result;  # prepend each character
+    }
+    return result;
+}
+
+fn reverse_split(s) {
+    # split into characters, reverse array, join back
+    return s.split("").reverse().join("");
+}
+
+say reverse_iterative("CRISP");   # PSIRC
+say reverse_for("hello");         # olleh
+say reverse_split("world");       # dlrow
+\end{lstlisting}
+\end{tcolorbox}
+
+The iterative version walks backward through the string index by index. The \texttt{for}-loop version takes advantage of CRISP's character iteration: each character is prepended to the result, naturally reversing the order. The split-reverse-join pipeline is the most idiomatic—it composes three operations into a single expression.
+
+\subsection{Palindrome Checker}
+
+A palindrome reads the same forward and backward. This program normalizes input (strips spaces, ignores case and punctuation) before checking:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Palindrome Checker (palindrome.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# palindrome.csp — Check if a string is a palindrome
+
+fn is_palindrome(s) {
+    # Normalize: lowercase, strip non-alphanumeric characters
+    let cleaned = "";
+    for ch in s {
+        let lower = ch.to_lower();
+        if lower =~ /[a-z0-9]/ {
+            cleaned = cleaned + lower;
+        }
+    }
+
+    # Compare with reversed version
+    let len = cleaned.len();
+    let i = 0;
+    while i < len / 2 {
+        if cleaned[i] != cleaned[len - 1 - i] {
+            return false;
+        }
+        i = i + 1;
+    }
+    return true;
+}
+
+# Test cases
+let tests = [
+    "racecar",
+    "A man a plan a canal Panama",
+    "hello",
+    "Madam, I'm Adam",
+    "12321",
+    "not a palindrome"
+];
+
+for test in tests {
+    let result = is_palindrome(test) ? "YES" : "NO";
+    say test + " → " + result;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: String Normalization}}, fonttitle=\bfseries, sharp corners]
+The palindrome checker illustrates a common text-processing pattern: \textbf{normalize, then analyze}. Real-world strings are messy—they have spaces, punctuation, mixed case. Rather than making the comparison logic handle all these variations, we first transform the input into a canonical form (lowercase alphanumeric), then apply the simple algorithm.
+
+This pattern—sanitize input, then operate—appears everywhere in text processing: search engines strip stop words before indexing, compilers tokenize before parsing, spam filters normalize before classifying. Get comfortable with it; you'll use it often.
+\end{tcolorbox}
+
+\subsection{Word Counter}
+
+This program counts words, lines, and characters—the classic Unix \texttt{wc} utility, in CRISP:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Word Counter (word\_count.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# word_count.csp — Count words, lines, and characters
+
+fn wc(text) {
+    let chars = text.len();
+
+    # Count lines by counting newlines
+    let lines = 1;  # at least one line
+    for ch in text {
+        if ch == "\n" {
+            lines = lines + 1;
+        }
+    }
+
+    # Count words: split on whitespace, filter empties
+    let raw_words = text.split(" ");
+    let words = 0;
+    for w in raw_words {
+        if w != "" { words = words + 1; }
+    }
+
+    return { lines => lines, words => words, chars => chars };
+}
+
+# Test with a sample paragraph
+let sample = "CRISP combines Perl expressiveness\n" +
+             "with Rust safety.\n" +
+             "It's a modern scripting language.\n";
+
+let stats = wc(sample);
+say "Lines: " + stats.lines;
+say "Words: " + stats.words;
+say "Chars: " + stats.chars;
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Character Frequency Analyzer}
+
+This program counts how often each character appears in a string—useful for cryptanalysis, text statistics, and data exploration:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Character Frequency (char\_freq.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# char_freq.csp — Character frequency analysis
+
+fn char_frequency(text) {
+    let freq = {};
+
+    for ch in text {
+        if ch == " " || ch == "\n" || ch == "\t" {
+            continue;  # skip whitespace
+        }
+
+        # Initialize count if first time seeing this char
+        if !freq.contains(ch) {
+            freq[ch] = 0;
+        }
+        freq[ch] = freq[ch] + 1;
+    }
+
+    return freq;
+}
+
+fn print_freq_table(freq) {
+    say "Char | Count | Bar";
+    say "-----+-------+------------------";
+
+    for ch in freq.keys() {
+        let count = freq[ch];
+        let bar = "█" x count;  # repeat block char
+        say "  " + ch + "   | " + count + "     | " + bar;
+    }
+}
+
+let text = "The quick brown fox jumps over the lazy dog";
+let freq = char_frequency(text);
+print_freq_table(freq);
+\end{lstlisting}
+\end{tcolorbox}
+
+The frequency analyzer builds a hash (\texttt{freq}) mapping each character to its count. The \texttt{x} operator (string repetition) creates a simple horizontal bar chart. This is a pattern you'll see throughout CRISP: use a hash for counting, an array for ordering, and lambdas for transformation.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Why String Processing Matters}}, fonttitle=\bfseries, sharp corners]
+Text is universal. Log files, configuration files, CSV data, HTML pages, JSON APIs, source code—everything is text. The languages that excel at text processing (Perl, AWK, sed) became the backbone of system administration and data wrangling for decades. CRISP inherits this tradition: strings are not an afterthought but a central design element.
+
+The four programs in this section—reversal, palindrome checking, word counting, and frequency analysis—are not just exercises. They're the building blocks of real-world text processing: validation, normalization, counting, and analysis. Master them, and you'll find that most text problems reduce to combinations of these patterns.
+\end{tcolorbox}

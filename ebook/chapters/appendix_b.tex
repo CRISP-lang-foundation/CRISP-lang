@@ -1,0 +1,175 @@
+% --- Appendix B: Keyword Reference ---
+\section{Keyword Reference}
+
+All CRISP keywords with their syntax and behavior.
+
+\rowcolors{2}{softviolet!30}{white}
+\begin{longtable}{@{}llp{8cm}@{}}
+\caption{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.5}}\\
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\endfirsthead
+
+\caption[]{\textcolor{darkpurple}{Complete CRISP Keywords — v0.1.5} (continued)}\\
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Category}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{3}{r}{\small\textit{Continued on next page}}\\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+\texttt{let} & Declaration &
+Declares a new variable with optional initialization.\\
+& & \texttt{let name = "CRISP";} \hspace{1em} \texttt{let @arr = [1,2];} \\
+
+\texttt{const} & Declaration &
+Declares an immutable constant (must be initialized).\\
+& & \texttt{const PI = 3.14159;} \\
+
+\texttt{fn} & Function &
+Defines a named function with parameters and body.\\
+& & \texttt{fn add(a, b) \{ return a + b; \}} \\
+
+\texttt{return} & Control Flow &
+Exits a function, optionally returning a value.\\
+& & \texttt{return 42;} \hspace{1em} \texttt{return;} (returns null) \\
+
+\texttt{if} & Conditional &
+Executes a block if condition is true.\\
+& & \texttt{if x > 0 \{ say "positive"; \}} \\
+
+\texttt{else} & Conditional &
+Alternative branch for \texttt{if}. Chains with \texttt{if} for \texttt{else if}.\\
+& & \texttt{else if x < 0 \{ ... \} else \{ ... \}} \\
+
+\texttt{while} & Loop &
+Repeats a block while condition is true.\\
+& & \texttt{while i < 10 \{ i = i + 1; \}} \\
+
+\texttt{for} & Loop &
+Iterates over arrays, hashes, strings, or ranges.\\
+& & \texttt{for item in @arr \{ say item; \}} \\
+
+\texttt{in} & Loop &
+Separates loop variable from iterable in \texttt{for} loops.\\
+& & \texttt{for ch in "hello" \{ ... \}} \\
+
+\texttt{break} & Loop Control &
+Exits the innermost loop immediately. Error outside loops.\\
+& & \texttt{if done \{ break; \}} \\
+
+\texttt{continue} & Loop Control &
+Skips to the next iteration of the innermost loop. Error outside loops.\\
+& & \texttt{if skip \{ continue; \}} \\
+
+\texttt{match} & Pattern Matching &
+Branches on value against patterns with optional \texttt{where} guards.\\
+& & \texttt{match x \{ 0 => \{ ... \} \_ => \{ ... \} \}} \\
+
+\texttt{where} & Guard &
+Adds a condition to a \texttt{match} arm. The arm fires only if guard is true.\\
+& & \texttt{n where n > 0 => \{ ... \}} \\
+
+\texttt{try} & Error Handling &
+Introduces a block whose errors can be caught.\\
+& & \texttt{try \{ risky(); \}} \\
+
+\texttt{catch} & Error Handling &
+Catches errors from a preceding \texttt{try} block.\\
+& & \texttt{catch e \{ say e; \}} \hspace{1em} \texttt{catch e as err \{ say err; \}} (alias) \\
+
+\texttt{finally} & Error Handling &
+Block that always executes after \texttt{try} (and \texttt{catch}), regardless of errors.\\
+& & \texttt{finally \{ cleanup(); \}} \\
+
+\texttt{throw} & Error Handling &
+Emits a catchable \texttt{UserError} with a message. Interchangeable with \texttt{die}.\\
+& & \texttt{throw "invalid input";} \\
+
+\texttt{die} & Error Handling &
+Emits a catchable \texttt{UserError} with a message. Interchangeable with \texttt{throw}.\\
+& & \texttt{die "fatal error";} \\
+
+\texttt{class} & OOP &
+Defines a class with methods and optional parent.\\
+& & \texttt{class Point \{ fn new(x, y) \{ ... \} \}} \\
+
+\texttt{extends} & OOP &
+Specifies parent class for inheritance.\\
+& & \texttt{class Dog extends Animal \{ ... \}} \\
+
+\texttt{self} & OOP &
+Refers to the current object instance inside methods.\\
+& & \texttt{self.x = 10;} \\
+
+\texttt{super} & OOP &
+Calls parent constructor (\texttt{super(args)}) or method (\texttt{super.method(args)}).\\
+& & \texttt{super(x, y);} \hspace{1em} \texttt{super.distance();} \\
+
+\texttt{static} & OOP &
+Declares a static method (called on class, not instance).\\
+& & \texttt{static fn square(x) \{ return x * x; \}} \\
+
+\texttt{new} & OOP (Contextual) &
+Contextual keyword for object construction: \texttt{new ClassName(args)}.\\
+& & \texttt{let p = new Point(3, 4);} \\
+
+\texttt{print} & Output &
+Outputs arguments to stdout without trailing newline.\\
+& & \texttt{print "Hello, ", name;} \hspace{1em} \texttt{print("Hello, ", name);} (paren) \\
+
+\texttt{say} & Output &
+Outputs arguments to stdout with automatic trailing newline.\\
+& & \texttt{say "Hello, ", name, "!";} \hspace{1em} \texttt{say("Hello, ", name);} (paren) \\
+
+\texttt{warn} & Output &
+Outputs arguments to stderr with "Warning:" prefix.\\
+& & \texttt{warn("low memory");} \\
+
+\texttt{use} & Module &
+Loads an opt-in module. Currently \texttt{posix} is the only built-in module.\\
+& & \texttt{use posix;} → creates \texttt{posix} hash variable \\
+
+\texttt{true} & Literal &
+Boolean true value.\\
+& & \texttt{let flag = true;} \\
+
+\texttt{false} & Literal &
+Boolean false value.\\
+& & \texttt{if done == false \{ ... \}} \\
+
+\texttt{null} & Literal &
+Represents absence of value. Returned by failed conversions.\\
+& & \texttt{let x = null;} \hspace{1em} \texttt{if x == null \{ ... \}} \\
+
+\bottomrule
+\end{longtable}
+
+\clearpage
+\subsection{Control Flow Keywords}
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Control Flow Keywords — Internal Behavior}}
+\vspace{0.3em}
+\begin{tabular}{@{}llp{8cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Keyword}} & \textbf{\textcolor{white}{Sentinel Error}} & \textbf{\textcolor{white}{Behavior}} \\
+\midrule
+\texttt{return} & \texttt{RuntimeError::ReturnSignal(Value)} & Unwinds call stack. \texttt{finally} blocks execute before propagation. \\
+\texttt{break} & \texttt{RuntimeError::BreakSignal} & Exits innermost loop. Error if used outside \texttt{while}/\texttt{for}. \\
+\texttt{continue} & \texttt{RuntimeError::ContinueSignal} & Skips to next loop iteration. Error if used outside \texttt{while}/\texttt{for}. \\
+\texttt{throw}/\texttt{die} & \texttt{RuntimeError::UserError(String)} & Catchable by \texttt{catch}. Uncaught: terminates script with message. \\
+\bottomrule
+\end{tabular}
+\end{table}

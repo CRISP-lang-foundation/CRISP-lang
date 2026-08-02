@@ -1,0 +1,165 @@
+% --- Chapter: JSON Serialization ---
+\section{JSON Serialization}
+
+JSON (JavaScript Object Notation) is the lingua franca of modern data exchange. Every web API, configuration file, and data pipeline speaks JSON. CRISP provides native JSON support with four functions that cover the full lifecycle: serialization, pretty-printing, deserialization, and validation.
+
+\subsection{Serializing to JSON}
+
+The \texttt{to\_json} function converts any CRISP value into a compact JSON string. Hashes become JSON objects, arrays become JSON arrays, and scalar types map to their JSON equivalents:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Serialization}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Build a configuration object
+let config = {
+    name => "CRISP",
+    version => "0.1.5",
+    features => ["oop", "regex", "json", "networking"],
+    settings => { debug => true, port => 8080 }
+};
+
+# Compact JSON
+let compact = to_json(config);
+say compact;
+# {"features":["oop","regex","json","networking"],"name":"CRISP",
+#  "settings":{"debug":true,"port":8080},"version":"0.1.5"}
+
+# Pretty-printed JSON (indented, multi-line)
+say to_json_pretty(config);
+# {
+#   "features": ["oop", "regex", "json", "networking"],
+#   "name": "CRISP",
+#   "settings": {
+#     "debug": true,
+#     "port": 8080
+#   },
+#   "version": "0.1.5"
+# }
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{Deserializing from JSON}
+
+\texttt{from\_json} parses a JSON string into native CRISP values. JSON objects become hashes (with dot-notation field access), arrays become CRISP arrays, and scalar values map directly:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Parsing}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Parse a JSON string
+let data = from_json('{"x": 10, "y": 20, "label": "point"}');
+
+# Access fields with dot notation
+say data.x;       # 10
+say data.y;       # 20
+say data.label;   # "point"
+
+# Parse a JSON array
+let items = from_json('[1, 2, 3, 4, 5]');
+say items.len();  # 5
+say items[2];     # 3
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Validation}
+
+\texttt{json\_valid} checks whether a string is syntactically valid JSON without parsing it into values. Use it to validate input before processing:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Validation}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Valid JSON
+say json_valid('{"a": 1}');     # true
+say json_valid('[1, 2, 3]');    # true
+say json_valid('"hello"');      # true
+say json_valid('42');           # true
+
+# Invalid JSON
+say json_valid('not json');     # false
+say json_valid('{bad}');        # false
+say json_valid('[1, 2,]');      # false  (trailing comma)
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{A Complete Example: Configuration Loader}
+
+Here is a practical program that reads a JSON configuration file, validates it, and uses the settings to control program behavior:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Configuration Loader (config\_loader.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# config_loader.csp — Load and validate a JSON config file
+
+fn load_config(path) {
+    if !file_exists(path) {
+        say "Error: config file '" + path + "' not found.";
+        exit(1);
+    }
+
+    let raw = read_file(path);
+
+    if !json_valid(raw) {
+        say "Error: invalid JSON in '" + path + "'.";
+        exit(1);
+    }
+
+    let config = from_json(raw);
+    return config;
+}
+
+# Load and display
+let config = load_config("app.json");
+
+say "App: " + config.name;
+say "Version: " + config.version;
+
+# Iterate over features
+say "Features:";
+for feature in config.features {
+    say "  - " + feature;
+}
+
+# Use nested settings
+if config.settings.debug {
+    say "Debug mode: ON";
+    say "Port: " + config.settings.port;
+    say "Full config (pretty):";
+    say to_json_pretty(config);
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\clearpage
+\subsection{JSON as a Data Exchange Format}
+
+One of the most common scripting tasks is transforming data between formats. Here is a program that reads a JSON file, filters and transforms the data, and writes the result back as JSON—a pattern used daily in data pipelines:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{JSON Transform Pipeline (json\_transform.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# json_transform.csp — Filter and transform JSON data
+
+# Sample data: list of users
+let users_json = '[{"name":"Alice","age":25,"active":true},
+                   {"name":"Bob","age":17,"active":false},
+                   {"name":"Charlie","age":30,"active":true},
+                   {"name":"Diana","age":22,"active":true}]';
+
+let users = from_json(users_json);
+
+# Filter: only active users 18+
+let adults = users.filter(|u| => u.active && u.age >= 18);
+
+# Transform: add a display_name field
+let enriched = adults.map(|u| => {
+    u.display_name = u.name + " (" + u.age + ")";
+    return u;
+});
+
+# Output: pretty-printed JSON
+say to_json_pretty(enriched);
+\end{lstlisting}
+\end{tcolorbox}
+
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Why JSON Matters in CRISP}}, fonttitle=\bfseries, sharp corners]
+JSON support in CRISP follows the language's design philosophy: simple, composable, and practical. The four functions—\texttt{to\_json}, \texttt{to\_json\_pretty}, \texttt{from\_json}, and \texttt{json\_valid}—cover the complete JSON lifecycle without ceremony. Combined with CRISP's native hash and array operations, JSON data is immediately usable: parse it, filter it with \texttt{.filter()}, transform it with \texttt{.map()}, and write it back. No intermediate classes, no boilerplate, no impedance mismatch.
+
+This is the same pattern that made Perl the king of text processing: read, transform, write. CRISP extends this pattern to structured data, making it equally natural to work with JSON APIs, configuration files, and data pipelines.
+\end{tcolorbox}

@@ -1,0 +1,69 @@
+% --- Chapter: Getting Started ---
+\section{Getting Started}
+
+\subsection{Installation and Running}
+
+CRISP is a single binary. Build from source:
+
+\begin{lstlisting}[language=bash]
+git clone https://github.com/user/crisp.git
+cd crisp
+cargo build --release
+./target/release/crisp
+\end{lstlisting}
+
+\subsection{Running CRISP Scripts}
+
+CRISP supports four modes of operation:
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{CRISP Execution Modes}}
+\vspace{0.3em}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Mode}} & \textbf{\textcolor{white}{Command}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+REPL & \texttt{crisp} & Interactive shell \\
+Script file & \texttt{crisp script.csp} & Execute a \texttt{.csp} file \\
+One-liner & \texttt{crisp -e "say 42"} & Inline code execution \\
+AST dump & \texttt{crisp --ast script.csp} & Print parsed AST (debugging) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Additional CLI flags:
+\begin{itemize}
+    \item \texttt{--debug} — Run with verbose debug output
+    \item \texttt{--repl} — Force REPL mode
+    \item \texttt{--version} — Print version information
+\end{itemize}
+
+\subsection{REPL Features}
+
+The interactive REPL supports:
+
+\begin{itemize}
+    \item \textbf{Multiline input} — Blocks and expressions span multiple lines
+    \item \textbf{Debug toggle} — \texttt{debug verbose} / \texttt{debug off} within the REPL
+    \item \textbf{Exit} — Type \texttt{exit} to quit
+    \item \textbf{Help} — Type \texttt{help} for available commands
+\end{itemize}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{REPL Session}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+$ crisp
+> CRISP v0.1.5 - 2026
+Creative Rust Implemented Scripting Paradigm
+Perl-inspired . Rust-powered
+
+Type 'exit' to quit, 'help' for commands
+
+>>> let name = "CRISP";
+>>> say "Hello, ", name, "!";
+Hello, CRISP!
+>>> exit
+\end{lstlisting}
+\end{tcolorbox}

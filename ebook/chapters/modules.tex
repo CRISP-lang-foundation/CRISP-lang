@@ -1,0 +1,26 @@
+% --- Chapter: Modules ---
+\section{Modules}
+
+CRISP supports modular code organization with the \texttt{use} keyword. Currently, \texttt{use posix;} is the only built-in module.
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Modules}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Load the POSIX module
+use posix;
+
+# POSIX functions live under a namespaced hash
+let pid = posix["fork"]();
+let fd = posix["open"]("/tmp/test.txt", O_WRONLY | O_CREAT, 0o644);
+posix["write"](fd, "Hello!\n", 7);
+posix["close"](fd);
+
+# posix is a regular Hash — you can inspect it
+for func in posix {
+    say func;  # lists all POSIX function names
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: Module System}}, fonttitle=\bfseries, sharp corners]
+The module system is under active development. Currently, only \texttt{use posix;} is supported. Future releases will extend this to user-defined modules (\texttt{use mymodule;}), import paths, and selective imports. The namespaced hash pattern (each module creating its own hash) will be the standard approach for all modules.
+\end{tcolorbox}

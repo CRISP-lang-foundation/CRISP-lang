@@ -1,0 +1,145 @@
+% --- Appendix A: Standard Library Reference ---
+\section{Standard Library Reference}
+
+\subsection{Console I/O}
+\begin{itemize}
+    \item \texttt{print(args...)} — Output without newline. Supports bare and paren syntax.
+    \item \texttt{say(args...)} — Output with newline. Supports bare and paren syntax.
+    \item \texttt{warn(args...)} — Output to STDERR with "Warning:" prefix.
+    \item \texttt{readline(prompt?) → String} — Read a line from stdin, strips trailing newline.
+    \item \texttt{read(prompt?) → Int | Float | Str} — Like readline but auto-detects type.
+    \item \texttt{input(prompt?) → String} — Python-compatible alias for readline.
+\end{itemize}
+
+\subsection{Error Handling}
+\begin{itemize}
+    \item \texttt{die(msg)} — Emit catchable UserError.
+    \item \texttt{throw(msg)} — Alias for die (catchable).
+    \item \texttt{assert(cond, msg?)} — Testing assertion.
+\end{itemize}
+
+\subsection{Process Control}
+\begin{itemize}
+    \item \texttt{exit(code?)} — Terminate process with exit code (default 0). \texttt{finally} blocks execute before termination. Not catchable.
+    \item \texttt{\_exit(code?)} — Hard exit via \texttt{std::process::exit}. No cleanup, immediate termination.
+\end{itemize}
+
+\subsection{Type Conversion and Introspection}
+\begin{itemize}
+    \item \texttt{int(value) → Int | Null} — Parse string to integer, returns null on failure.
+    \item \texttt{float(value) → Float | Null} — Parse string to float, returns null on failure.
+    \item \texttt{type(value) → String} — Returns type name ("int", "float", "string", "array", "hash", "bool", "null", "ref", "function", "object", "class").
+    \item \texttt{len(value) → Int} — Length of string, array, or hash.
+\end{itemize}
+
+\subsection{Array Operations}
+\begin{itemize}
+    \item \texttt{push(arr, val)} — Append to array.
+    \item \texttt{pop(arr) → Value} — Remove and return last element.
+    \item \texttt{shift(arr) → Value} — Remove and return first element.
+    \item \texttt{unshift(arr, val)} — Prepend to array.
+    \item \texttt{map(arr, callback) → Array} — Transform each element.
+    \item \texttt{filter(arr, callback) → Array} — Keep matching elements.
+    \item \texttt{grep(arr, callback) → Array} — Alias for filter.
+    \item \texttt{sort(arr) → Array} — Sort array.
+    \item \texttt{take(arr, n) → Array} — First N elements.
+    \item \texttt{zip(arr1, arr2) → Array} — Pair elements from two arrays.
+\end{itemize}
+
+\subsection{Math and Random}
+\begin{itemize}
+    \item \texttt{rand(max?) → Int} — Random integer in \texttt{0..max-1} (default: \texttt{u64::MAX}).
+    \item \texttt{sqrt(x) → Float} — Square root.
+    \item \texttt{pow(base, exp) → Float} — Exponentiation.
+    \item \texttt{abs(x) → Float} — Absolute value.
+    \item \texttt{min(a, b, ...) → Float} — Minimum value.
+    \item \texttt{max(a, b, ...) → Float} — Maximum value.
+    \item \texttt{PI}, \texttt{E}, \texttt{TAU} — Mathematical constants.
+\end{itemize}
+
+\subsection{File I/O (High-Level)}
+\begin{itemize}
+    \item \texttt{read\_file(path) → String} — Read entire file.
+    \item \texttt{write\_file(path, content) → Bool} — Write string to file.
+    \item \texttt{file\_exists(path) → Bool} — Check if file exists.
+\end{itemize}
+
+\subsection{JSON}
+\begin{itemize}
+    \item \texttt{to\_json(value) → String} — Serialize to JSON string.
+    \item \texttt{to\_json\_pretty(value) → String} — Pretty-printed JSON.
+    \item \texttt{from\_json(string) → Value} — Parse JSON string.
+    \item \texttt{json\_valid(string) → Bool} — Check if string is valid JSON.
+\end{itemize}
+
+\subsection{Crypto}
+\begin{itemize}
+    \item \texttt{md5(s) → String} — MD5 hash (hex).
+    \item \texttt{sha1(s) → String} — SHA-1 hash (hex).
+    \item \texttt{sha256(s) → String} — SHA-256 hash (hex).
+    \item \texttt{sha512(s) → String} — SHA-512 hash (hex).
+    \item \texttt{base64\_encode(s) → String} — Base64 encode.
+    \item \texttt{base64\_decode(s) → String} — Base64 decode.
+    \item \texttt{random\_bytes(n) → String} — Random hex bytes.
+\end{itemize}
+
+\subsection{Time}
+\begin{itemize}
+    \item \texttt{time() → Int} — Unix timestamp (seconds).
+    \item \texttt{timestamp() → Int} — Unix timestamp (milliseconds).
+    \item \texttt{datetime() → String} — Local datetime string.
+    \item \texttt{datetime\_utc() → String} — UTC datetime string.
+    \item \texttt{strftime(fmt, ts) → String} — Format timestamp.
+    \item \texttt{strptime(s, fmt) → Int} — Parse date string to timestamp.
+\end{itemize}
+
+\subsection{Network}
+\begin{itemize}
+    \item \texttt{http\_get(url) → String} — Fetch URL via HTTP GET.
+    \item \texttt{http\_post(url, body, content\_type?) → String} — POST data to URL.
+    \item \texttt{url\_encode(s) → String} — Percent-encode string for URLs.
+    \item \texttt{url\_decode(s) → String} — Decode percent-encoded string.
+\end{itemize}
+
+\subsection{Regex (stdlib)}
+\begin{itemize}
+    \item \texttt{regex\_match(text, pattern) → Bool} — Test if pattern matches.
+    \item \texttt{regex\_replace(text, pattern, replacement) → String} — Replace matches.
+    \item \texttt{regex\_split(text, pattern) → Array} — Split by regex.
+    \item \texttt{regex\_find\_all(text, pattern) → Array} — All matches.
+    \item \texttt{regex\_capture(text, pattern) → Array} — Capture groups.
+\end{itemize}
+
+\subsection{Testing}
+\begin{itemize}
+    \item \texttt{assert\_eq(a, b, msg?)} — Assert equality.
+    \item \texttt{assert\_ne(a, b, msg?)} — Assert inequality.
+    \item \texttt{assert\_true(cond, msg?)} — Assert truth.
+    \item \texttt{assert\_false(cond, msg?)} — Assert falsity.
+    \item \texttt{assert\_throws(fn)} — Assert function throws.
+\end{itemize}
+
+\subsection{Method Dispatch (Value Methods)}
+\texttt{Array methods:} \texttt{.contains(val)}, \texttt{.push(val)}, \texttt{.pop()}, \texttt{.shift()}, \texttt{.unshift(val)}, \texttt{.len()}, \texttt{.map(callback)}, \texttt{.filter(callback)}, \texttt{.grep(callback)}, \texttt{.join(sep)}, \texttt{.take(n)}, \texttt{.zip(other)}
+
+\texttt{String methods:} \texttt{.contains(substr)}, \texttt{.len()}, \texttt{.split(delim)}, \texttt{.join(sep)}, \texttt{.to\_lower()}, \texttt{.to\_upper()}
+
+\texttt{Hash methods:} \texttt{.keys()}, \texttt{.values()}, \texttt{.len()}, \texttt{.contains(key)}
+
+\subsection{POSIX Module (Opt-in via \texttt{use posix;})}
+\texttt{Processes:} \texttt{posix["fork"]}, \texttt{posix["execvp"]}, \texttt{posix["waitpid"]}, \texttt{posix["spawn"]}, \texttt{posix["getpid"]}, \texttt{posix["getppid"]}
+
+\texttt{Signals:} \texttt{posix["kill"]}, \texttt{posix["alarm"]}
+
+\texttt{Users:} \texttt{posix["getuid"]}, \texttt{posix["geteuid"]}, \texttt{posix["getgid"]}, \texttt{posix["getegid"]}
+
+\texttt{Files:} \texttt{posix["open"]}, \texttt{posix["close"]}, \texttt{posix["read"]}, \texttt{posix["write"]}, \texttt{posix["lseek"]}
+
+\texttt{Environment:} \texttt{posix["getenv"]}, \texttt{posix["setenv"]}, \texttt{posix["environ"]}
+
+\subsection{Process Management (stdlib)}
+\begin{itemize}
+    \item \texttt{system(cmd, args...) → Int} — Run command, return exit code.
+    \item \texttt{qx(cmd) → String} — Capture command output.
+    \item \texttt{pid() → Int} — Current process ID.
+\end{itemize}

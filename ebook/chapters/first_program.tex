@@ -1,0 +1,194 @@
+% --- Chapter: A First Program ---
+\section{A First Program}
+
+The only way to learn a new programming language is by writing programs in it. The first program to write is the same for all languages:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Hello, World!}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+say "Hello, World!";
+\end{lstlisting}
+\end{tcolorbox}
+
+Save this in a file called \texttt{hello.csp} and run it:
+
+\begin{lstlisting}[language=bash]
+$ crisp hello.csp
+Hello, World!
+\end{lstlisting}
+
+This program does two things: it calls the built-in function \texttt{say}, which prints its argument followed by a newline, and it passes a string literal \texttt{"Hello, World!"} as that argument. The semicolon terminates the statement, though CRISP is forgiving—semicolons are optional in many positions.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: The First Step}}, fonttitle=\bfseries, sharp corners]
+Every CRISP program is a sequence of statements. A statement can be a variable declaration, a function call, a control-flow construct, or an expression. The simplest useful program is one that produces output—and that's exactly what \texttt{say} does. As you progress through this book, you'll build on this foundation: from output, to variables, to computation, to control flow, and finally to complex programs that manipulate data, talk to the operating system, and solve real problems.
+
+\textit{--- With apologies to Brian Kernighan and Dennis Ritchie, whose "hello, world" started it all.}
+\end{tcolorbox}
+
+\subsection{A Temperature Converter}
+
+Let's write something more useful. We'll convert Fahrenheit to Celsius—a classic example from the C programming tradition.
+
+The formula is:
+
+\[
+C = \frac{5}{9} \times (F - 32)
+\]
+
+Here is a complete CRISP program that reads a Fahrenheit temperature and prints the Celsius equivalent:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Fahrenheit to Celsius Converter (fahrenheit\_to\_celsius.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# fahrenheit_to_celsius.csp — Convert Fahrenheit to Celsius
+
+say "Fahrenheit to Celsius Converter";
+say "================================";
+say "";
+
+say "Enter temperature in Fahrenheit:";
+let f = float(readline());
+
+if f == null {
+    say "That's not a valid number!";
+    exit(1);
+}
+
+let c = (5.0 / 9.0) * (f - 32.0);
+
+say f + "°F = " + c + "°C";
+\end{lstlisting}
+\end{tcolorbox}
+
+Let's walk through this program line by line:
+
+\begin{itemize}
+    \item Lines starting with \texttt{\#} are comments—they're ignored by CRISP but help humans understand the code.
+    \item \texttt{say} prints to the console with a newline; empty \texttt{say ""} produces a blank line.
+    \item \texttt{readline()} reads a line of text from the user. The program waits for the user to type something and press Enter.
+    \item \texttt{float(...)} converts the string to a floating-point number. If the conversion fails (the user typed ``hello'' instead of ``72''), it returns \texttt{null}.
+    \item \texttt{if f == null} checks for invalid input and exits with an error code if something went wrong.
+    \item The formula \texttt{(5.0 / 9.0) * (f - 32.0)} computes Celsius. Note the use of \texttt{5.0} and \texttt{9.0}—using integers \texttt{5 / 9} would produce 0 (integer division), but floats give the correct 0.555...
+    \item Finally, the result is printed with both the original and converted values.
+\end{itemize}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Programmer's Note: Integer vs. Float Division}}, fonttitle=\bfseries, sharp corners]
+CRISP's division operator \texttt{/} always produces a \textbf{Float} result, even when both operands are integers. So \texttt{5 / 9} returns \texttt{0.555...} (Float), not \texttt{0} (truncated integer). This differs from C and Python 2, where integer division truncates. It matches the behavior of Python 3 and modern Perl.
+
+If you want integer division, use the modulo operator \texttt{\%} and subtract: \texttt{(a - a \% b) / b}.
+\end{tcolorbox}
+
+\subsection{A Temperature Table}
+
+Our first program converts one temperature. A more useful version would print a table. Let's extend it to compute Fahrenheit, Celsius, and Kelvin for a range of values:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Temperature Table (temperature\_table.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# temperature_table.csp — Print a Fahrenheit-Celsius-Kelvin table
+
+say "Fahrenheit  Celsius  Kelvin";
+say "----------  -------  ------";
+
+let lower = 0;
+let upper = 300;
+let step = 20;
+
+let f = lower;
+while f <= upper {
+    let c = (5.0 / 9.0) * (f - 32.0);
+    let k = c + 273.15;
+
+    # Format each row with aligned columns
+    say f + "          " + c + "     " + k;
+
+    f = f + step;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+This program introduces several new concepts:
+
+\begin{itemize}
+    \item \textbf{Variables:} \texttt{lower}, \texttt{upper}, \texttt{step}, \texttt{f}, \texttt{c}, \texttt{k} store values that change during execution.
+    \item \textbf{The while loop:} \texttt{while f <= upper \{ ... \}} repeats the body as long as the condition is true.
+    \item \textbf{Reassignment:} \texttt{f = f + step} increments \texttt{f} by 20 each iteration. This is how loops advance—without it, the loop would run forever.
+\end{itemize}
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Thinking in CRISP: Loop Design}}, fonttitle=\bfseries, sharp corners]
+Every loop has three parts: \textbf{initialization} (setting \texttt{lower}, \texttt{upper}, \texttt{step} before the loop), \textbf{condition} (\texttt{f <= upper}), and \textbf{increment} (\texttt{f = f + step}). Forgetting the increment is the most common loop bug—the program will run forever because the condition never becomes false. CRISP doesn't stop you; it will happily loop until you kill the process with Ctrl+C.
+
+A safer pattern for numeric iteration is the \texttt{for} loop with ranges, which handles all three parts automatically: \texttt{for f in 0..301 by 20 \{ ... \}}.
+\end{tcolorbox}
+
+\subsection{An Interactive Temperature Converter}
+
+Let's combine input, computation, and control flow into a full interactive program that converts between Fahrenheit, Celsius, and Kelvin:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Interactive Temperature Converter (temp\_convert.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# temp_convert.csp — Interactive F/C/K converter
+
+say "Temperature Converter";
+say "=====================";
+say "Type 'quit' to exit.";
+say "";
+
+while true {
+    say "Enter temperature (e.g., 100F, 37C, 300K):";
+    let input = readline("> ");
+
+    if input == "quit" || input == "exit" {
+        say "Goodbye!";
+        break;
+    }
+
+    if input == "" { continue; }
+
+    # Extract the scale from the last character
+    let scale = input[input.len() - 1];
+    let value_str = input[0..input.len() - 1];
+    let value = float(value_str);
+
+    if value == null {
+        say "Invalid number. Try again.";
+        continue;
+    }
+
+    if scale == "F" || scale == "f" {
+        let c = (5.0 / 9.0) * (value - 32.0);
+        let k = c + 273.15;
+        say value + "°F = " + c + "°C = " + k + " K";
+    } else if scale == "C" || scale == "c" {
+        let f = (9.0 / 5.0) * value + 32.0;
+        let k = value + 273.15;
+        say value + "°C = " + f + "°F = " + k + " K";
+    } else if scale == "K" || scale == "k" {
+        let c = value - 273.15;
+        let f = (9.0 / 5.0) * c + 32.0;
+        say value + " K = " + c + "°C = " + f + "°F";
+    } else {
+        say "Unknown scale '" + scale + "'. Use F, C, or K.";
+    }
+
+    say "";
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+This program demonstrates CRISP's string slicing (\texttt{input[0..input.len() - 1]} extracts everything except the last character), the \texttt{break} statement (exits the infinite loop), \texttt{continue} (skips to the next iteration), and multi-way branching with \texttt{if/else if/else}.
+
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{What We Learned}}, fonttitle=\bfseries, sharp corners]
+From three temperature programs, we've covered:
+
+\begin{itemize}
+    \item \textbf{Output:} \texttt{say} prints to the console
+    \item \textbf{Input:} \texttt{readline()} reads user input; \texttt{float()} converts strings to numbers
+    \item \textbf{Variables:} \texttt{let} declares them, \texttt{=} reassigns them
+    \item \textbf{Arithmetic:} \texttt{+}, \texttt{-}, \texttt{*}, \texttt{/} with natural precedence
+    \item \textbf{Conditionals:} \texttt{if/else if/else} for decision-making
+    \item \textbf{Loops:} \texttt{while} for repetition; \texttt{break} to exit; \texttt{continue} to skip
+    \item \textbf{String slicing:} \texttt{s[0..n]} extracts substrings
+    \item \textbf{Error handling:} checking for \texttt{null} after conversion
+    \item \textbf{Program structure:} comments, whitespace, and logical flow
+\end{itemize}
+
+These are the fundamentals of programming in any language. Everything else—functions, arrays, hashes, classes, regex—builds on this foundation.
+\end{tcolorbox}

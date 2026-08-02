@@ -1,0 +1,126 @@
+% --- Chapter: Network Programming ---
+\section{Network Programming}
+
+CRISP provides network I/O through high-level convenience functions for the most common tasks: fetching web resources, sending data to servers, and working with URLs.
+
+\subsection{Fetching Web Resources}
+
+The \texttt{http\_get} function fetches a URL and returns the response body as a string:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{HTTP GET}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Fetch a web page
+let html = http_get("https://example.com");
+say "Fetched " + html.len() + " bytes";
+
+# Fetch JSON from an API
+let response = http_get("https://api.github.com/repos/user/crisp");
+if json_valid(response) {
+    let data = from_json(response);
+    say "Stars: " + data.stargazers_count;
+    say "Forks: " + data.forks_count;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Sending Data}
+
+\texttt{http\_post} sends data to a URL with a specified content type:
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{HTTP POST}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Send JSON data
+let payload = to_json({
+    name => "CRISP",
+    version => "0.1.5"
+});
+
+let response = http_post("https://httpbin.org/post",
+                         payload,
+                         "application/json");
+
+say "Server responded: " + response;
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{URL Encoding and Decoding}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{URL Encoding}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# Encode special characters for URLs
+say url_encode("hello world");      # hello%20world
+say url_encode("name=CRISP&v=1");   # name%3DCRISP%26v%3D1
+
+# Decode URL-encoded strings
+say url_decode("hello%20world");    # hello world
+say url_decode("name%3DCRISP");     # name=CRISP
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{A Complete Example: Simple Web Client}
+
+\begin{tcolorbox}[colback=codebg, colframe=darkpurple, colbacktitle=darkpurple, title=\textbf{\textcolor{codegold}{Web Client (web\_client.csp)}}, fonttitle=\bfseries, sharp corners]
+\begin{lstlisting}
+# web_client.csp — Fetch and display web resources
+
+fn fetch_json_api(url) {
+    say "Fetching: " + url;
+    let raw = http_get(url);
+
+    if raw == "" {
+        say "Error: no response from server.";
+        return null;
+    }
+
+    if !json_valid(raw) {
+        say "Error: response is not valid JSON.";
+        return null;
+    }
+
+    return from_json(raw);
+}
+
+# Try fetching a public API
+let data = fetch_json_api("https://api.github.com/repos/rust-lang/rust");
+
+if data != null {
+    say "Repository: " + data.full_name;
+    say "Description: " + data.description;
+    say "Stars: " + data.stargazers_count;
+    say "Language: " + data.language;
+}
+\end{lstlisting}
+\end{tcolorbox}
+
+\subsection{Network Function Reference}
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{softviolet!30}{white}
+\caption{\textcolor{darkpurple}{Network Functions}}
+\vspace{0.3em}
+\begin{tabular}{@{}llp{8cm}@{}}
+\toprule
+\rowcolor{softvioletdark}
+\textbf{\textcolor{white}{Function}} & \textbf{\textcolor{white}{Signature}} & \textbf{\textcolor{white}{Description}} \\
+\midrule
+\texttt{http\_get} & \texttt{http\_get(url) → String} & Fetch a URL via GET, return response body \\
+\texttt{http\_post} & \texttt{http\_post(url, body, content\_type?) → String} & POST data to a URL \\
+\texttt{url\_encode} & \texttt{url\_encode(s) → String} & Percent-encode special characters \\
+\texttt{url\_decode} & \texttt{url\_decode(s) → String} & Decode percent-encoded string \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{1.5cm}
+\begin{tcolorbox}[colback=lightlavender, colframe=softvioletdark, title=\textbf{\textcolor{darkpurple}{Design Note: HTTP Support}}, fonttitle=\bfseries, sharp corners]
+CRISP's network module provides simple, blocking HTTP operations via the \texttt{ureq} crate—a minimal, dependency-light HTTP client. The design philosophy is:
+
+\begin{itemize}
+    \item \textbf{Simple by default:} \texttt{http\_get(url)} does one thing: fetches a URL and returns the body. No callbacks, no streams, no complexity.
+    \item \textbf{Opt-in complexity:} Future releases will add streaming responses, async I/O, and WebSocket support for advanced use cases.
+    \item \textbf{Self-contained:} The network functions are available globally (no \texttt{use network;} required) because web access is a fundamental scripting need, not a specialized system concern.
+\end{itemize}
+
+For low-level socket programming, CRISP delegates to the POSIX module (\texttt{use posix;} → \texttt{posix["socket"]}, \texttt{posix["connect"]}, etc.), giving you full control when needed.
+\end{tcolorbox}
