@@ -167,62 +167,26 @@ pub fn register(env: &mut Environment) {
         }),
     );
 
-    // http_get() - simple HTTP GET
+    // http_get() using ureq
     env.define(
-        "http_get",
-        Value::NativeFn(|args| {
+	"http_get",
+	Value::NativeFn(|args| {
             if args.is_empty() {
-                return Err(RuntimeError::ArgumentError("http_get needs URL".into()));
+		return Err(RuntimeError::ArgumentError("http_get needs a URL".into()));
             }
-
+	    
             let url = args[0].as_str();
 
-            // Simple implementation - expects http://host:port/path
-            let parts: Vec<&str> = url.split("://").collect();
-            if parts.len() != 2 || parts[0] != "http" {
-                return Err(RuntimeError::ArgumentError("Invalid HTTP URL".into()));
-            }
+            let response = ureq::get(&url)
+		.timeout(std::time::Duration::from_secs(30))
+		.call()
+		.map_err(|e| RuntimeError::IOError(e.to_string()))?;
 
-            let rest = parts[1];
-            let path_parts: Vec<&str> = rest.splitn(2, '/').collect();
-            let host_port = path_parts[0];
-            let path = if path_parts.len() > 1 {
-                format!("/{}", path_parts[1])
-            } else {
-                "/".to_string()
-            };
+            let body = response.into_string()
+		.map_err(|e| RuntimeError::IOError(e.to_string()))?;
 
-            let host_port_parts: Vec<&str> = host_port.split(':').collect();
-            let host = host_port_parts[0];
-            let port = if host_port_parts.len() > 1 {
-                host_port_parts[1].parse::<u16>().unwrap_or(80)
-            } else {
-                80
-            };
-
-            let addr = format!("{}:{}", host, port);
-            let mut stream =
-                TcpStream::connect(&addr).map_err(|e| RuntimeError::IOError(e.to_string()))?;
-
-            let request = format!(
-                "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
-                path, host
-            );
-
-            stream
-                .write_all(request.as_bytes())
-                .map_err(|e| RuntimeError::IOError(e.to_string()))?;
-            stream
-                .flush()
-                .map_err(|e| RuntimeError::IOError(e.to_string()))?;
-
-            let mut response = String::new();
-            stream
-                .read_to_string(&mut response)
-                .map_err(|e| RuntimeError::IOError(e.to_string()))?;
-
-            Ok(Value::Str(response.into()))
-        }),
+            Ok(Value::Str(body.into()))
+	}),
     );
 }
 
