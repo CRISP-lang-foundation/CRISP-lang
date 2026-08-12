@@ -39,7 +39,7 @@ impl Environment {
             variables: HashMap::new(),
         }
     }
-
+    
     pub fn define(&mut self, name: &str, value: Value) {
         if diagnostics::is_debug_mode() {
             diagnostics::log_debug(&format!("ENV: Defining {} in environment", name));
