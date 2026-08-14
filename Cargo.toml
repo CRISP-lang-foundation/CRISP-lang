@@ -8,6 +8,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/crisp-lang/crisp"
 
 [dependencies]
+indexmap = "2"
 hex = "0.4"
 # Lexer
 logos = "0.16"

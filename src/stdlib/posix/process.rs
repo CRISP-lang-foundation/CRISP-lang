@@ -14,11 +14,13 @@
 
 use std::cell::RefCell;
 use std::ffi::CString;
+use std::process::Command;
 use std::rc::Rc;
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
-use std::process::Command;
+
+use indexmap::IndexMap;
 
 pub fn register(env: &mut Environment) {
     // getpid()
@@ -150,7 +152,7 @@ pub fn register(env: &mut Environment) {
                 .output()
                 .map_err(|e| RuntimeError::IOError(e.to_string()))?;
 
-            let mut hash = std::collections::HashMap::new();
+            let mut hash = IndexMap::new();
             hash.insert(
                 "stdout".into(),
                 Value::Str(String::from_utf8_lossy(&output.stdout).to_string().into()),

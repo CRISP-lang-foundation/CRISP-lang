@@ -105,7 +105,7 @@ pub enum MatchPattern {
 pub enum VarType {
     Scalar,
     Array,
-    Hash,
+    Hash,   // Added hash type
     Ref,
 }
 
@@ -286,8 +286,8 @@ pub enum BinaryOp {
     ShiftRight,
     Concat,
     Repeat,
-    Match,
-    NotMatch,
+    Match,      // Added =~ operator
+    NotMatch,   // Added !~ operator
 }
 
 #[derive(Debug, Clone, PartialEq)]

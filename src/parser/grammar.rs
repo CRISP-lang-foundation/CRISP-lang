@@ -214,7 +214,7 @@ impl Parser {
                 self.maybe_consume_semicolon();
                 Ok(Stmt::Expr(Box::new(expr)))
             }
-            TokenKind::Dollar | TokenKind::At | TokenKind::Ampersand => {
+            TokenKind::Dollar | TokenKind::At | TokenKind::Modulo | TokenKind::Ampersand => {
                 let expr = self.parse_expression()?;
                 self.maybe_consume_semicolon();
                 Ok(Stmt::Expr(Box::new(expr)))
@@ -704,6 +704,10 @@ impl Parser {
                 self.advance();
                 VarType::Array
             }
+            TokenKind::Modulo => {  // Hash sigil (same as modulo operator, context-dependent)
+                self.advance();
+                VarType::Hash
+            }
             TokenKind::Ampersand => {
                 self.advance();
                 VarType::Ref
@@ -965,10 +969,10 @@ impl Parser {
             TokenKind::Ampersand => Ok(BinaryOp::BitAnd),
             TokenKind::ShiftLeft => Ok(BinaryOp::ShiftLeft),
             TokenKind::ShiftRight => Ok(BinaryOp::ShiftRight),
-            TokenKind::MatchOp => Ok(BinaryOp::Match),
+            TokenKind::MatchOp => Ok(BinaryOp::Match),      // Added =~ operator
             TokenKind::Dot => Ok(BinaryOp::Concat),
             TokenKind::Ident(s) if s == "x" => Ok(BinaryOp::Repeat),
-            TokenKind::NotMatchOp => Ok(BinaryOp::NotMatch),
+            TokenKind::NotMatchOp => Ok(BinaryOp::NotMatch), // Added !~ operator
             _ => Err(ParseError {
                 message: format!("Unexpected binary operator: {:?}", token),
                 span: None,
@@ -1172,6 +1176,41 @@ impl Parser {
                 self.parse_postfix(Expr::SuperRef)
             }
 
+            // ─── Translate/substitution operator ─────────────────────
+            TokenKind::Translate => {
+                self.advance();
+                // Parse s/pattern/replacement/flags
+                let (pattern, replacement, global) = self.parse_substitution()?;
+                
+                // Default target is $_ (or could be a variable)
+                let text = if let TokenKind::Ident(ref n) = self.peek() {
+                    if n == "_" {
+                        self.advance();
+                        Expr::Var {
+                            name: "$_".to_string(),
+                            sigil: Some(VarType::Scalar),
+                        }
+                    } else {
+                        Expr::Var {
+                            name: "$_".to_string(),
+                            sigil: Some(VarType::Scalar),
+                        }
+                    }
+                } else {
+                    Expr::Var {
+                        name: "$_".to_string(),
+                        sigil: Some(VarType::Scalar),
+                    }
+                };
+                
+                Ok(Expr::Substitute {
+                    text: Box::new(text),
+                    pattern: Box::new(Expr::Str(pattern)),
+                    replacement: Box::new(Expr::Str(replacement)),
+                    global,
+                })
+            }
+
             // ─── Plain identifier (with contextual 'new' keyword) ────
             TokenKind::Ident(s) => {
                 self.advance();
@@ -1215,8 +1254,8 @@ impl Parser {
                 self.parse_postfix(expr)
             }
 
-            // ─── Sigil-prefixed variables: $scalar, @array, &ref ─────
-            TokenKind::Dollar | TokenKind::At | TokenKind::Ampersand => {
+            // ─── Sigil-prefixed variables: $scalar, @array, %hash, &ref ─────
+            TokenKind::Dollar | TokenKind::At | TokenKind::Modulo | TokenKind::Ampersand => {
                 let sigil = self.parse_sigil();
                 let name = if let TokenKind::Ident(n) = self.peek() {
                     let n = n.clone();
@@ -1241,6 +1280,118 @@ impl Parser {
                 message: format!("Unexpected token: {:?}", token),
                 span: None,
             }),
+        }
+    }
+
+    // ─── Substitution parsing ────────────────────────────────────────────
+
+    fn parse_substitution(&mut self) -> Result<(String, String, bool), ParseError> {
+        // Parse delimiter (usually / but can be other chars)
+        let delimiter = if let TokenKind::Slash = self.peek() {
+            self.advance();
+            '/'
+        } else {
+            // Support other delimiters: s#pattern#replacement#
+            if let TokenKind::Ident(ch) = self.peek() {
+                let d = ch.chars().next().unwrap_or('/');
+                self.advance();
+                d
+            } else {
+                '/'
+            }
+        };
+        
+        // Parse pattern
+        let pattern = self.parse_until_delimiter(delimiter)?;
+        self.expect_delimiter(delimiter)?;
+        
+        // Parse replacement
+        let replacement = self.parse_until_delimiter(delimiter)?;
+        self.expect_delimiter(delimiter)?;
+        
+        // Parse flags
+        let mut global = false;
+        while !self.is_at_end() {
+            match self.peek() {
+                TokenKind::Ident(ref flag) => {
+                    match flag.as_str() {
+                        "g" => global = true,
+                        "i" => {}  // Case insensitive (TODO)
+                        "m" => {}  // Multiline (TODO)
+                        "s" => {}  // Single line (TODO)
+                        "e" => {}  // Evaluate replacement (TODO)
+                        _ => break,
+                    }
+                    self.advance();
+                }
+                _ => break,
+            }
+        }
+        
+        Ok((pattern, replacement, global))
+    }
+
+    fn parse_until_delimiter(&mut self, delimiter: char) -> Result<String, ParseError> {
+        let mut content = String::new();
+        
+        while !self.is_at_end() {
+            match self.peek() {
+                TokenKind::Backslash => {
+                    self.advance();
+                    if let TokenKind::Ident(ch) = self.peek() {
+                        content.push('\\');
+                        content.push_str(&ch);
+                        self.advance();
+                    } else if let TokenKind::Slash = self.peek() {
+                        content.push('/');
+                        self.advance();
+                    }
+                }
+                TokenKind::Slash if delimiter == '/' => break,
+                TokenKind::Ident(ref s) => {
+                    if s.len() == 1 && s.chars().next().unwrap() == delimiter {
+                        break;
+                    }
+                    content.push_str(s);
+                    self.advance();
+                }
+                _ => {
+                    // Handle other token types
+                    if let Some(s) = self.get_token_text() {
+                        content.push_str(&s);
+                    }
+                    self.advance();
+                }
+            }
+        }
+        
+        Ok(content)
+    }
+
+    fn expect_delimiter(&mut self, delimiter: char) -> Result<(), ParseError> {
+        match self.peek() {
+            TokenKind::Slash if delimiter == '/' => {
+                self.advance();
+                Ok(())
+            }
+            TokenKind::Ident(ref s) if s.len() == 1 && s.chars().next().unwrap() == delimiter => {
+                self.advance();
+                Ok(())
+            }
+            _ => Err(ParseError {
+                message: format!("Expected delimiter '{}'", delimiter),
+                span: None,
+            }),
+        }
+    }
+
+    fn get_token_text(&self) -> Option<String> {
+        match &self.peek() {
+            TokenKind::Ident(s) => Some(s.clone()),
+            TokenKind::Int(s) => Some(s.clone()),
+            TokenKind::Float(s) => Some(s.clone()),
+            TokenKind::StringLit(s) => Some(s.clone()),
+            _ => None,
         }
     }
 

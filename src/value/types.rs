@@ -18,6 +18,7 @@ use crate::eval::RuntimeError;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
+use indexmap::IndexMap;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -27,7 +28,7 @@ pub enum Value {
     Float(f64),
     Str(Rc<String>),
     Array(Rc<RefCell<Vec<Value>>>),
-    Hash(Rc<RefCell<HashMap<String, Value>>>),
+    Hash(Rc<RefCell<IndexMap<String, Value>>>),
     Ref(Rc<RefCell<Value>>),
     NativeFn(fn(&[Value]) -> Result<Value, RuntimeError>),
     UserFn {

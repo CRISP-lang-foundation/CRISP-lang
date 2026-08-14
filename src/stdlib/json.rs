@@ -13,12 +13,15 @@
 // limitations under the License.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
+
+use indexmap::IndexMap;
 use serde_json::{Map, Number, Value as JsonValue};
-use std::collections::HashMap;
+
 
 pub fn register(env: &mut Environment) {
     // to_json() - conversion of value to JSON string
@@ -147,7 +150,7 @@ fn json_to_value(json_value: JsonValue) -> Result<Value, RuntimeError> {
             Ok(Value::Array(Rc::new(RefCell::new(elements?))))
         }
         JsonValue::Object(map) => {
-            let mut hash = HashMap::new();
+            let mut hash = IndexMap::new(); 
             for (key, value) in map {
                 hash.insert(key, json_to_value(value)?);
             }

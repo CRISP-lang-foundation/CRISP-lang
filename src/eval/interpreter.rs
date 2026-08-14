@@ -16,8 +16,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use indexmap::IndexMap;   
+
 use crate::eval::{Environment, RuntimeError};
-use crate::parser::{BinaryOp, Expr, MatchPattern, Program, Stmt};
+use crate::parser::{BinaryOp, Expr, MatchPattern, Program, Stmt, VarType};
 use crate::stdlib;
 use crate::utils::diagnostics;
 use crate::value::Value;
@@ -119,18 +121,18 @@ impl Interpreter {
     pub fn eval_statement(&mut self, stmt: &Stmt) -> Result<Value, RuntimeError> {
         match stmt {
             Stmt::Let { name, expr, .. } => {
-		let value = if let Some(e) = expr {
-		    self.eval_expression(e)?
-		} else {
-		    Value::Null
-		};
-		if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                let value = if let Some(e) = expr {
+                    self.eval_expression(e)?
+                } else {
+                    Value::Null
+                };
+                if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                     eprintln!("LET: Defining the variable '{}'", name);
                     eprintln!("LET: '{}' = {:?}", name, value_fmt(&value));
                 }
-		self.env.borrow_mut().define(name, value.clone());
-		Ok(Value::Null)
-	    }
+                self.env.borrow_mut().define(name, value.clone());
+                Ok(Value::Null)
+            }
             Stmt::Assign { name, expr } => {
                 let value = self.eval_expression(expr)?;
                 self.env.borrow_mut().set(name, value)?;
@@ -215,7 +217,7 @@ impl Interpreter {
                 println!();
                 Ok(Value::Null)
             }
-	    Stmt::Warn(exprs) => {
+            Stmt::Warn(exprs) => {
                 for e in exprs {
                     let value = self.eval_expression(e)?;
                     eprint!("{}", value.as_str());
@@ -442,7 +444,7 @@ impl Interpreter {
                     "posix" => {
                         let mut temp_env = Environment::new();
                         crate::stdlib::posix::register(&mut temp_env);
-                        let mut hash = std::collections::HashMap::new();
+			let mut hash = IndexMap::new();
                         for (name, func) in temp_env.entries() {
                             hash.insert(name, func);
                         }
@@ -704,6 +706,15 @@ impl Interpreter {
                 }
                 Ok(Value::Str(s.clone().into()))
             }
+	    Expr::Regex(s) => {
+		let pattern = s
+		    .as_str()
+		    .strip_prefix("m/")
+		    .or_else(|| s.as_str().strip_prefix("qr/"))
+		    .and_then(|p| p.strip_suffix('/'))
+		    .unwrap_or(s.as_str());
+		Ok(Value::Str(pattern.to_string().into()))
+	    }
             Expr::Bool(b) => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                     eprintln!("BOOL: {}", b);
@@ -716,22 +727,63 @@ impl Interpreter {
                 }
                 Ok(Value::Null)
             }
-            Expr::Var { name, .. } => {
+            // ─── Variable lookup with sigil type enforcement ──────────
+            Expr::Var { name, sigil } => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
-                    eprintln!("VAR: Looking up '{}'", name);
+                    eprintln!("VAR: Looking up '{}' with sigil {:?}", name, sigil);
                 }
-                let result = self
-                    .env
-                    .borrow()
-                    .get(name)
-                    .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()));
-                if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
-                    match &result {
-                        Ok(val) => eprintln!("VAR: '{}' -> {}", name, value_fmt(val)),
-                        Err(e) => eprintln!("VAR: '{}' not found! {:?}", name, e),
+
+                let value = self.env.borrow().get(&name)
+                    .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))?;
+
+                // Type enforcement based on sigil
+                match sigil {
+                    Some(VarType::Hash) => {
+                        if !matches!(value, Value::Hash(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> hash", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Array) => {
+                        if !matches!(value, Value::Array(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> array", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Ref) => {
+                        if !matches!(value, Value::Ref(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> ref", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Scalar) => {
+                        // Scalar can hold any single value (Int, Float, Str, Bool, Null)
+                        // But not Array, Hash, or Ref (those need explicit sigils)
+                        if matches!(value, Value::Array(_) | Value::Hash(_) | Value::Ref(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> scalar", name);
+                        }
+                        Ok(value)
+                    }
+                    None => {
+                        // No sigil - allow any type
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> (no sigil)", name);
+                        }
+                        Ok(value)
                     }
                 }
-                result
             }
             Expr::Binary { left, op, right } => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
@@ -753,7 +805,7 @@ impl Interpreter {
                 Ok(Value::Array(Rc::new(RefCell::new(arr))))
             }
             Expr::Hash(pairs) => {
-                let mut hash = std::collections::HashMap::new();
+                let mut hash = IndexMap::new();
                 for (key, value) in pairs {
                     let key_str = self.eval_expression(key)?.as_str();
                     let value = self.eval_expression(value)?;
@@ -825,23 +877,23 @@ impl Interpreter {
                         if let Some(ctor) = methods.get("new") {
                             // Create a temporary object for self
                             let temp_obj = Value::Object {
-				class: name.clone(),
-				fields: fields.clone(),
-				methods: methods.clone(),
-			    };
-			    
-			    // Set named args as fields before constructor runs
-			    for (key, val) in &named_map {
-				fields.borrow_mut().insert(key.clone(), val.clone());
-			    }
-			    
-			    self.call_method(ctor, &temp_obj, &call_args)?;
-			} else {
-			    // No constructor, just set fields from named args
-			    for (key, val) in named_map {
-				fields.borrow_mut().insert(key, val);
-			    }
-			}
+                                class: name.clone(),
+                                fields: fields.clone(),
+                                methods: methods.clone(),
+                            };
+
+                            // Set named args as fields before constructor runs
+                            for (key, val) in &named_map {
+                                fields.borrow_mut().insert(key.clone(), val.clone());
+                            }
+
+                            self.call_method(ctor, &temp_obj, &call_args)?;
+                        } else {
+                            // No constructor, just set fields from named args
+                            for (key, val) in named_map {
+                                fields.borrow_mut().insert(key, val);
+                            }
+                        }
 
                         Ok(Value::Object {
                             class: name.clone(),
@@ -1009,21 +1061,25 @@ impl Interpreter {
 
             // ─── OOP: Field assignment ────────────────────────────────
             Expr::FieldAssign {
-                object,
-                field,
-                value,
-            } => {
-                let val = self.eval_expression(value)?;
-                let obj = self.eval_expression(object)?;
-                match obj {
-                    Value::Object { fields, .. } => {
-                        fields.borrow_mut().insert(field.clone(), val.clone());
-                        Ok(val)
-                    }
-                    _ => Err(RuntimeError::TypeMismatch),
-                }
-            }
-	    Expr::Index { collection, index } => {
+		object,
+		field,
+		value,
+	    } => {
+		let val = self.eval_expression(value)?;
+		let obj = self.eval_expression(object)?;
+		match obj {
+		    Value::Object { fields, .. } => {
+			fields.borrow_mut().insert(field.clone(), val.clone());
+			Ok(val)
+		    }
+		    Value::Hash(hash) => {
+			hash.borrow_mut().insert(field.clone(), val.clone());
+			Ok(val)
+		    }
+		    _ => Err(RuntimeError::TypeMismatch),
+		}
+	    }
+            Expr::Index { collection, index } => {
                 let coll = self.eval_expression(collection)?;
 
                 // ── Range slicing: coll[start..end] ────────────────
@@ -1626,7 +1682,7 @@ impl Interpreter {
                     _ => Err(RuntimeError::TypeMismatch),
                 }
             }
-	    Expr::Assign { name, value, .. } => {
+            Expr::Assign { name, value, .. } => {
                 let val = self.eval_expression(value)?;
                 self.env.borrow_mut().set(name, val.clone())?;
                 Ok(val)
@@ -1714,12 +1770,26 @@ impl Interpreter {
                 _ => Err(RuntimeError::InvalidOperation(format!("{:?}", op))),
             },
             (Value::Str(l), Value::Str(r)) => match op {
-                Add => Ok(Value::Str(format!("{}{}", l, r).into())),
-                Concat => Ok(Value::Str(format!("{}{}", l, r).into())),
-                Eq => Ok(Value::Bool(l == r)),
-                Ne => Ok(Value::Bool(l != r)),
-                _ => Err(RuntimeError::InvalidOperation(format!("{:?}", op))),
-            },
+		Add => Ok(Value::Str(format!("{}{}", l, r).into())),
+		Concat => Ok(Value::Str(format!("{}{}", l, r).into())),
+		Eq => Ok(Value::Bool(l == r)),
+		Ne => Ok(Value::Bool(l != r)),
+		Match => {
+		    use regex::Regex;
+		    let re = Regex::new(&r).map_err(|e| {
+			RuntimeError::InvalidOperation(format!("Invalid regex: {}", e))
+		    })?;
+		    Ok(Value::Bool(re.is_match(&l)))
+		}
+		NotMatch => {
+		    use regex::Regex;
+		    let re = Regex::new(&r).map_err(|e| {
+			RuntimeError::InvalidOperation(format!("Invalid regex: {}", e))
+		    })?;
+		    Ok(Value::Bool(!re.is_match(&l)))
+		}
+		_ => Err(RuntimeError::InvalidOperation(format!("{:?}", op))),
+	    },
             (Value::Float(l), Value::Float(r)) => match op {
                 Add => Ok(Value::Float(l + r)),
                 Sub => Ok(Value::Float(l - r)),
@@ -2103,7 +2173,7 @@ impl Interpreter {
                     }
                     Value::Hash(hash) => {
                         let hash = hash.borrow();
-                        let mut result = std::collections::HashMap::new();
+                        let mut result = IndexMap::new();
                         for (k, v) in hash.iter() {
                             let keep = self.call_value(
                                 callback,

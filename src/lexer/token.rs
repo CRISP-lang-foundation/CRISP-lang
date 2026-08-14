@@ -20,8 +20,10 @@
 use logos::Logos;
 
 #[derive(Logos, Debug, Clone, PartialEq)]
-#[logos(skip(r"[ \t\n\f]+"))]
-#[logos(skip(r"#.*", allow_greedy = true))]
+#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip(r"#[^\n]*", allow_greedy = true))]
+#[logos(skip(r"//[^\n]*", allow_greedy = true))]
+#[logos(skip(r"/\*([^*]|\*[^/])*\*/"))]
 pub enum TokenKind {
     // Keywords – MUST be before Ident
     #[token("let")]
@@ -96,6 +98,8 @@ pub enum TokenKind {
     Dollar,
     #[token("@")]
     At,
+    #[token("%")]  // Both modulo and hash sigil (context-dependent)
+    Modulo,
     #[token("&")]
     Ampersand,
     #[token("\\")]
@@ -112,8 +116,6 @@ pub enum TokenKind {
     Star,
     #[token("/")]
     Slash,
-    #[token("%")]
-    Modulo,
     #[token("**")]
     Pow,
 
@@ -205,6 +207,14 @@ pub enum TokenKind {
     #[token("~")]
     Tilde,
 
+    // Regex literals - MUST come BEFORE Ident
+    #[regex(r"m/[^/\n]*/", |lex| lex.slice().to_string())]
+    Regex(String),
+    
+    // qr/pattern/ - quoted regex
+    #[regex(r"qr/[^/\n]*/", |lex| lex.slice().to_string())]
+    QuotedRegex(String),
+
     // Identifiers
     #[regex("[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Ident(String),
@@ -222,13 +232,6 @@ pub enum TokenKind {
     StringLit(String),
     #[regex(r#"'([^'\\]|\\.)*'"#, |lex| lex.slice().to_string())]
     SingleString(String),
-
-    // Regex literals
-    #[regex(r"m/[^/\n;]*/", |lex| lex.slice().to_string())]
-    Regex(String),
-    
-    #[regex(r"qr/[^/\n;]*/", |lex| lex.slice().to_string())]
-    QuotedRegex(String),
 
     #[end]
     EOF,
