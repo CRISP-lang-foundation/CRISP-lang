@@ -1,0 +1,90 @@
+// ============================================
+/// Hash Sigil Demo
+// ============================================
+
+say "=== Hash Sigil Demo ===";
+
+let %person = {    
+    name => "Alice",
+    age => 30,
+    city => "Prague"
+};
+
+say "Name: ", %person.name;     # Name: Alice
+say "Age: ", %person.age;       # Age: 30
+say "City: ", %person.city;     # City: Prague
+
+// Update hash field
+%person.age = 31;
+say "Updated age: ", %person.age;  # Updated age: 31
+
+// Iterate over hash KEYS
+say "Hash entries:";
+for key in %person.keys() {
+    say "  ", key, ": ", %person[key];
+}
+
+// ============================================
+/// Match Operator (=~ and !~)
+// ============================================
+
+say "\n=== Match Operator Demo ===";
+
+let $text = "Hello, CRISP language!";
+
+if $text =~ m/CRISP/ {
+    say "✓ Found 'CRISP' in text";
+}
+
+if $text !~ m/Python/ {
+    say "✓ Did not find 'Python' in text";
+}
+
+// Extract matches (word chars)
+let @matches = regex_find_all($text, "\\w+");
+say "Words: ", @matches;
+
+// ============================================
+/// Substitution (using regex_replace)
+// ============================================
+
+say "\n=== Substitution Demo ===";
+
+let $greeting = "Hello world!";
+
+// Simple substitution using regex_replace
+$greeting = regex_replace($greeting, "world", "CRISP");
+say $greeting;  # Hello CRISP!
+
+// Global substitution
+let $text2 = "foo bar foo baz foo";
+$text2 = regex_replace($text2, "foo", "FOO");
+say $text2;  # FOO bar FOO baz FOO
+
+// ============================================
+/// Comment Styles
+// ============================================
+
+say "\n=== Comment Style Demo ===";
+
+// This is a C++-style line comment
+# This is a Perl-style line comment
+
+/*
+ * This is a C-style
+ * multi-line comment
+ */
+
+/// This is a doc comment for the function
+//! This is an inner doc comment
+
+/// Greet a person
+fn greet(name) {
+    //! This function returns a greeting
+    return "Hello, " + name + "!";
+}
+
+say greet("CRISP");
+
+say "\n✅ All features working!";
+
