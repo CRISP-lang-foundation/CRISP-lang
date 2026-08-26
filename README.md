@@ -89,7 +89,6 @@ fn example() { /* ... */ }
 | C-style | `/* comment */` | Block comments (multi-line) |
 
 All comments are ignored by the interpreter.
-```
 
 ### Sigil Variables (Perl-style)
 
