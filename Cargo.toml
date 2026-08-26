@@ -1,6 +1,6 @@
 [package]
 name = "crisp"
-version = "0.1.0"
+version = "0.1.7"
 edition = "2024"
 authors = ["CRISP Team"]
 description = "CRISP - Creative Rust Implemented Scripting Paradigm"
@@ -8,47 +8,50 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/crisp-lang/crisp"
 
 [dependencies]
+indexmap = "2"
 hex = "0.4"
 # Lexer
 logos = "0.16"
 
-# Farebný výstup
+# Colored output
 colored = "3.1"
 
 # Error handling
 anyhow = "1.0"
 thiserror = "2.0"
 
-# CLI argumenty
+# CLI arguments
 clap = { version = "4.6", features = ["derive"] }
 
 # REPL
 rustyline = { version = "18.0", features = ["with-file-history"] }
 
-# Logovanie
+# Logging
 env_logger = "0.11"
 log = "0.4"
 
-# Náhodné čísla
+# Random numbers
 rand = "0.10"
 
-# Čas a dátum (pre time modul)
+# Time a date (for time module)
 chrono = "0.4"
 
-# Kryptografia (pre crypto modul)
+# Cryptography (for crypto module)
 md5 = "0.8"
 sha1 = "0.11"
 sha2 = "0.11"
-base64 = "0.22"
+base64 = "0.23"
 
-# Regulárne výrazy (pre regex modul)
+# Regular expressions (for regex module)
 regex = "1.13"
 
-# Seriálizácia (pre json modul)
+# Serialization (for json module)
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 stacksafe = "1.0"
+
+ureq = { version = "3.4", features = ["json", "gzip"] }
 
 # POSIX
 [target.'cfg(unix)'.dependencies]
@@ -61,3 +64,7 @@ tempfile = "3.27"
 [[bin]]
 name = "crisp"
 path = "src/main.rs"
+
+[lib]
+name = "crisp"
+path = "src/lib.rs"

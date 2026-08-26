@@ -135,8 +135,7 @@ pub fn register(env: &mut Environment) {
     env.define(
         "lseek",
         Value::NativeFn(|args| {
-            let fd = args
-                .get(0)
+            let fd = args.first()
                 .and_then(|a| a.as_number())
                 .ok_or(RuntimeError::TypeMismatch)? as i32;
             let offset = args

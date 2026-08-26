@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::eval::{Environment, RuntimeError};
-use crate::value::Value;
+use crate::eval::Environment;
 
-pub fn register(env: &mut Environment) {
+pub fn register(_env: &mut Environment) {
     // TODO: Implementovať terminal funkcie
 }

@@ -15,6 +15,7 @@
 //! Types of values in CRISP
 
 use crate::eval::RuntimeError;
+use indexmap::IndexMap;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -27,7 +28,7 @@ pub enum Value {
     Float(f64),
     Str(Rc<String>),
     Array(Rc<RefCell<Vec<Value>>>),
-    Hash(Rc<RefCell<HashMap<String, Value>>>),
+    Hash(Rc<RefCell<IndexMap<String, Value>>>),
     Ref(Rc<RefCell<Value>>),
     NativeFn(fn(&[Value]) -> Result<Value, RuntimeError>),
     UserFn {

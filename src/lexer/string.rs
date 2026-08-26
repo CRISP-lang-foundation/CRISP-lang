@@ -19,13 +19,15 @@
 //! - Character escaping and unescaping
 //! - Unicode escape sequences (TODO)
 
-use crate::lexer::TokenKind;
 use crate::lexer::ParseResult;
+use crate::lexer::TokenKind;
 
 /// Process escape sequences in a string literal
 ///
 /// # Examples
 /// ```
+/// use crisp::lexer::process_escapes;
+///
 /// let s = "Hello\\nWorld";
 /// let processed = process_escapes(s);
 /// assert_eq!(processed, "Hello\nWorld");
@@ -45,10 +47,10 @@ pub fn process_escapes(input: &str) -> String {
     let chars: Vec<char> = input.chars().collect();
     let mut i = 0;
     let mut result = String::new();
-    
+
     while i < chars.len() {
         let ch = chars[i];
-        
+
         if ch == '\\' && i + 1 < chars.len() {
             // Escape sequence
             i += 1;
@@ -82,11 +84,10 @@ pub fn process_escapes(input: &str) -> String {
                         }
                         if i < chars.len() && chars[i] == '}' {
                             let hex_str: String = chars[start..i].iter().collect();
-                            if let Ok(codepoint) = u32::from_str_radix(&hex_str, 16) {
-                                if let Some(c) = char::from_u32(codepoint) {
+                            if let Ok(codepoint) = u32::from_str_radix(&hex_str, 16)
+                                && let Some(c) = char::from_u32(codepoint) {
                                     result.push(c);
                                 }
-                            }
                         }
                     }
                 }
@@ -97,10 +98,10 @@ pub fn process_escapes(input: &str) -> String {
         } else {
             result.push(ch);
         }
-        
+
         i += 1;
     }
-    
+
     result
 }
 
@@ -116,6 +117,8 @@ pub fn parse_string(input: &str) -> ParseResult {
 ///
 /// # Examples
 /// ```
+/// use crisp::lexer::unquote;
+///
 /// let s = "\"hello\"";
 /// let unquoted = unquote(s);
 /// assert_eq!(unquoted, "hello");

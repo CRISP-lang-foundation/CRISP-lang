@@ -4,14 +4,14 @@
 
 [![Rust](https://img.shields.io/badge/Rust-1.90+-orange.svg)](https://www.rust-lang.org)
 [![Top Language](https://img.shields.io/github/languages/top/Peter-L-SVK/CRISP-lang)](https://github.com/Peter-L-SVK/CRISP-lang)
-[![License: MIT/Apache-2.0](https://img.shields.io/badge/License-MIT%2FApache--2.0-green.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-green.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## What is CRISP?
 
 **CRISP** is a scripting language that combines the **expressiveness of Perl 5** with the **safety and performance of Rust** — plus the best ideas from Python, Perl, Rust, and C. Write powerful scripts with familiar syntax, run them on a Rust-powered interpreter that guarantees memory safety and blazing speed.
 
-For a deeper dive, read the ebook.
+For a deeper dive, read the ebook avaliable in pdf, also as source code - [CRISP Book](https://github.com/CRISP-lang-foundation/CRISP-book).
 
 ## Quick Start
 
@@ -65,6 +65,30 @@ let person = { name => "John", age => 30 };
 say "Hello, " + name + "!";        # String concatenation
 say fruits;                         # [apple, banana, cherry]
 say person;                         # {name: John, age: 30}
+```
+
+### Comments
+
+CRISP supports multiple comment styles for flexibility:
+
+```crisp
+# Perl-style line comment (starts with #)
+// C++-style line comment (starts with //)
+/* C-style block comment
+   can span multiple lines */
+
+// Comment for the following item
+fn example() { /* ... */ }
+
+```
+
+| Style | Syntax | Purpose |
+|-------|--------|---------|
+| Perl-style | `# comment` | Line comments |
+| C++-style | `// comment` | Line comments |
+| C-style | `/* comment */` | Block comments (multi-line) |
+
+All comments are ignored by the interpreter.
 ```
 
 ### Sigil Variables (Perl-style)

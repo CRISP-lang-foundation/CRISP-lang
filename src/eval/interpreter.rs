@@ -16,8 +16,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use indexmap::IndexMap;
+
 use crate::eval::{Environment, RuntimeError};
-use crate::parser::{BinaryOp, Expr, MatchPattern, Program, Stmt};
+use crate::parser::{BinaryOp, Expr, MatchPattern, Program, Stmt, VarType};
 use crate::stdlib;
 use crate::utils::diagnostics;
 use crate::value::Value;
@@ -77,6 +79,12 @@ fn to_usize(val: &Value, max: usize) -> Result<usize, RuntimeError> {
     }
 }
 
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Interpreter {
     pub fn new() -> Self {
         let mut env = Environment::new();
@@ -100,9 +108,7 @@ impl Interpreter {
             match self.eval_statement(stmt) {
                 Ok(v) => result = v,
                 Err(RuntimeError::BreakSignal) => {
-                    return Err(RuntimeError::InvalidOperation(
-                        "break outside loop".into(),
-                    ));
+                    return Err(RuntimeError::InvalidOperation("break outside loop".into()));
                 }
                 Err(RuntimeError::ContinueSignal) => {
                     return Err(RuntimeError::InvalidOperation(
@@ -119,18 +125,18 @@ impl Interpreter {
     pub fn eval_statement(&mut self, stmt: &Stmt) -> Result<Value, RuntimeError> {
         match stmt {
             Stmt::Let { name, expr, .. } => {
-		let value = if let Some(e) = expr {
-		    self.eval_expression(e)?
-		} else {
-		    Value::Null
-		};
-		if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                let value = if let Some(e) = expr {
+                    self.eval_expression(e)?
+                } else {
+                    Value::Null
+                };
+                if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                     eprintln!("LET: Defining the variable '{}'", name);
                     eprintln!("LET: '{}' = {:?}", name, value_fmt(&value));
                 }
-		self.env.borrow_mut().define(name, value.clone());
-		Ok(Value::Null)
-	    }
+                self.env.borrow_mut().define(name, value.clone());
+                Ok(Value::Null)
+            }
             Stmt::Assign { name, expr } => {
                 let value = self.eval_expression(expr)?;
                 self.env.borrow_mut().set(name, value)?;
@@ -161,7 +167,8 @@ impl Interpreter {
                 methods,
                 static_methods,
             } => {
-                let class_env = Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.env))));
+                let class_env =
+                    Rc::new(RefCell::new(Environment::with_parent(Rc::clone(&self.env))));
 
                 // Register instance methods
                 let mut method_map = HashMap::new();
@@ -215,7 +222,7 @@ impl Interpreter {
                 println!();
                 Ok(Value::Null)
             }
-	    Stmt::Warn(exprs) => {
+            Stmt::Warn(exprs) => {
                 for e in exprs {
                     let value = self.eval_expression(e)?;
                     eprint!("{}", value.as_str());
@@ -442,14 +449,13 @@ impl Interpreter {
                     "posix" => {
                         let mut temp_env = Environment::new();
                         crate::stdlib::posix::register(&mut temp_env);
-                        let mut hash = std::collections::HashMap::new();
+                        let mut hash = IndexMap::new();
                         for (name, func) in temp_env.entries() {
                             hash.insert(name, func);
                         }
-                        self.env.borrow_mut().define(
-                            "posix",
-                            Value::Hash(Rc::new(RefCell::new(hash))),
-                        );
+                        self.env
+                            .borrow_mut()
+                            .define("posix", Value::Hash(Rc::new(RefCell::new(hash))));
                     }
                     _ => {
                         // Unknown module – no-op for now
@@ -511,8 +517,7 @@ impl Interpreter {
                     && !break_signal
                     && !continue_signal
                     && return_signal.is_none()
-                {
-                    if let Some(catch_stmts) = catch_block {
+                    && let Some(catch_stmts) = catch_block {
                         let saved_env = if catch_var.is_some() {
                             let old = Rc::clone(&self.env);
                             let new_env = Environment::with_parent(Rc::clone(&old));
@@ -574,7 +579,6 @@ impl Interpreter {
                             self.env = old;
                         }
                     }
-                }
 
                 // Finally always executes
                 if let Some(finally_stmts) = finally_block {
@@ -704,6 +708,15 @@ impl Interpreter {
                 }
                 Ok(Value::Str(s.clone().into()))
             }
+            Expr::Regex(s) => {
+                let pattern = s
+                    .as_str()
+                    .strip_prefix("m/")
+                    .or_else(|| s.as_str().strip_prefix("qr/"))
+                    .and_then(|p| p.strip_suffix('/'))
+                    .unwrap_or(s.as_str());
+                Ok(Value::Str(pattern.to_string().into()))
+            }
             Expr::Bool(b) => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                     eprintln!("BOOL: {}", b);
@@ -716,22 +729,66 @@ impl Interpreter {
                 }
                 Ok(Value::Null)
             }
-            Expr::Var { name, .. } => {
+            // ─── Variable lookup with sigil type enforcement ──────────
+            Expr::Var { name, sigil } => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
-                    eprintln!("VAR: Looking up '{}'", name);
+                    eprintln!("VAR: Looking up '{}' with sigil {:?}", name, sigil);
                 }
-                let result = self
+
+                let value = self
                     .env
                     .borrow()
                     .get(name)
-                    .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()));
-                if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
-                    match &result {
-                        Ok(val) => eprintln!("VAR: '{}' -> {}", name, value_fmt(val)),
-                        Err(e) => eprintln!("VAR: '{}' not found! {:?}", name, e),
+                    .ok_or_else(|| RuntimeError::UndefinedVariable(name.clone()))?;
+
+                // Type enforcement based on sigil
+                match sigil {
+                    Some(VarType::Hash) => {
+                        if !matches!(value, Value::Hash(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> hash", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Array) => {
+                        if !matches!(value, Value::Array(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> array", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Ref) => {
+                        if !matches!(value, Value::Ref(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> ref", name);
+                        }
+                        Ok(value)
+                    }
+                    Some(VarType::Scalar) => {
+                        // Scalar can hold any single value (Int, Float, Str, Bool, Null)
+                        // But not Array, Hash, or Ref (those need explicit sigils)
+                        if matches!(value, Value::Array(_) | Value::Hash(_) | Value::Ref(_)) {
+                            return Err(RuntimeError::TypeMismatch);
+                        }
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> scalar", name);
+                        }
+                        Ok(value)
+                    }
+                    None => {
+                        // No sigil - allow any type
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("VAR: '{}' -> (no sigil)", name);
+                        }
+                        Ok(value)
                     }
                 }
-                result
             }
             Expr::Binary { left, op, right } => {
                 if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
@@ -753,7 +810,7 @@ impl Interpreter {
                 Ok(Value::Array(Rc::new(RefCell::new(arr))))
             }
             Expr::Hash(pairs) => {
-                let mut hash = std::collections::HashMap::new();
+                let mut hash = IndexMap::new();
                 for (key, value) in pairs {
                     let key_str = self.eval_expression(key)?.as_str();
                     let value = self.eval_expression(value)?;
@@ -825,23 +882,23 @@ impl Interpreter {
                         if let Some(ctor) = methods.get("new") {
                             // Create a temporary object for self
                             let temp_obj = Value::Object {
-				class: name.clone(),
-				fields: fields.clone(),
-				methods: methods.clone(),
-			    };
-			    
-			    // Set named args as fields before constructor runs
-			    for (key, val) in &named_map {
-				fields.borrow_mut().insert(key.clone(), val.clone());
-			    }
-			    
-			    self.call_method(ctor, &temp_obj, &call_args)?;
-			} else {
-			    // No constructor, just set fields from named args
-			    for (key, val) in named_map {
-				fields.borrow_mut().insert(key, val);
-			    }
-			}
+                                class: name.clone(),
+                                fields: fields.clone(),
+                                methods: methods.clone(),
+                            };
+
+                            // Set named args as fields before constructor runs
+                            for (key, val) in &named_map {
+                                fields.borrow_mut().insert(key.clone(), val.clone());
+                            }
+
+                            self.call_method(ctor, &temp_obj, &call_args)?;
+                        } else {
+                            // No constructor, just set fields from named args
+                            for (key, val) in named_map {
+                                fields.borrow_mut().insert(key, val);
+                            }
+                        }
 
                         Ok(Value::Object {
                             class: name.clone(),
@@ -869,8 +926,8 @@ impl Interpreter {
                     // Instance method call: object.method(args)
                     Value::Object {
                         methods: ref _object_methods,
-                        fields: ref fields,
-                        class: ref class,
+                        ref fields,
+                        ref class,
                     } => {
                         // If calling via super, start at the parent class
                         let skip_own = matches!(object.as_ref(), Expr::SuperRef);
@@ -884,7 +941,8 @@ impl Interpreter {
                                     Some(p) => current_class_name = p.clone(),
                                     None => {
                                         return Err(RuntimeError::UndefinedVariable(format!(
-                                            "No parent class to call '{}' on via super", method
+                                            "No parent class to call '{}' on via super",
+                                            method
                                         )));
                                     }
                                 }
@@ -915,7 +973,7 @@ impl Interpreter {
                         // Check if it's a field containing a callable value
                         if let Some(field_val) = fields.borrow().get(method.as_str()) {
                             if let Value::UserFn { .. } = field_val {
-                                return self.call_method(&field_val, &obj, &call_args);
+                                return self.call_method(field_val, &obj, &call_args);
                             }
                             return Ok(field_val.clone());
                         }
@@ -984,23 +1042,15 @@ impl Interpreter {
             Expr::FieldAccess { object, field } => {
                 let obj = self.eval_expression(object)?;
                 match obj {
-                    Value::Object { fields, .. } => fields
-                        .borrow()
-                        .get(field.as_str())
-                        .cloned()
-                        .ok_or_else(|| {
-                            RuntimeError::UndefinedVariable(format!(
-                                "Field '{}' not found",
-                                field
-                            ))
-                        }),
+                    Value::Object { fields, .. } => {
+                        fields.borrow().get(field.as_str()).cloned().ok_or_else(|| {
+                            RuntimeError::UndefinedVariable(format!("Field '{}' not found", field))
+                        })
+                    }
                     Value::Hash(hash) => {
                         let hash = hash.borrow();
                         hash.get(field.as_str()).cloned().ok_or_else(|| {
-                            RuntimeError::UndefinedVariable(format!(
-                                "Field '{}' not found",
-                                field
-                            ))
+                            RuntimeError::UndefinedVariable(format!("Field '{}' not found", field))
                         })
                     }
                     _ => Err(RuntimeError::TypeMismatch),
@@ -1020,10 +1070,14 @@ impl Interpreter {
                         fields.borrow_mut().insert(field.clone(), val.clone());
                         Ok(val)
                     }
+                    Value::Hash(hash) => {
+                        hash.borrow_mut().insert(field.clone(), val.clone());
+                        Ok(val)
+                    }
                     _ => Err(RuntimeError::TypeMismatch),
                 }
             }
-	    Expr::Index { collection, index } => {
+            Expr::Index { collection, index } => {
                 let coll = self.eval_expression(collection)?;
 
                 // ── Range slicing: coll[start..end] ────────────────
@@ -1044,9 +1098,7 @@ impl Interpreter {
                             let arr = arr.borrow();
                             let e = e.min(arr.len());
                             let s = s.min(e);
-                            Ok(Value::Array(Rc::new(RefCell::new(
-                                arr[s..e].to_vec(),
-                            ))))
+                            Ok(Value::Array(Rc::new(RefCell::new(arr[s..e].to_vec()))))
                         }
                         Value::Str(string) => {
                             let chars: Vec<char> = string.chars().collect();
@@ -1191,15 +1243,11 @@ impl Interpreter {
                         let end_char = b.chars().next().unwrap() as u32;
                         let range: Vec<Value> = if *inclusive {
                             (start_char..=end_char)
-                                .map(|c| {
-                                    Value::Str(char::from_u32(c).unwrap().to_string().into())
-                                })
+                                .map(|c| Value::Str(char::from_u32(c).unwrap().to_string().into()))
                                 .collect()
                         } else {
                             (start_char..end_char)
-                                .map(|c| {
-                                    Value::Str(char::from_u32(c).unwrap().to_string().into())
-                                })
+                                .map(|c| Value::Str(char::from_u32(c).unwrap().to_string().into()))
                                 .collect()
                         };
                         Ok(Value::Array(Rc::new(RefCell::new(range))))
@@ -1318,8 +1366,7 @@ impl Interpreter {
 
                     // --- Extract values BEFORE mutable borrow ---
                     let super_fn_opt = self.env.borrow().get("super");
-                    let parent_class_opt =
-                        self.env.borrow().get("__parent_class__");
+                    let parent_class_opt = self.env.borrow().get("__parent_class__");
 
                     // Try to find parent class constructor via 'super' binding
                     if let Some(super_fn) = super_fn_opt {
@@ -1335,10 +1382,7 @@ impl Interpreter {
                             eprintln!("CALL: Found '__parent_class__' in environment");
                         }
 
-                        if let Value::Class {
-                            methods, name, ..
-                        } = parent_class_val
-                        {
+                        if let Value::Class { methods, name, .. } = parent_class_val {
                             // Try to call parent's 'new' method
                             if let Some(ctor) = methods.get("new").cloned() {
                                 if diagnostics::get_debug_level()
@@ -1362,14 +1406,11 @@ impl Interpreter {
                                 self.call_method(&ctor, &temp_obj, &eval_args)?;
 
                                 // Copy fields from parent object to current object
-                                let self_obj_opt =
-                                    self.env.borrow().get("self");
-                                if let Some(self_obj) = self_obj_opt {
-                                    if let Value::Object { fields, .. } = self_obj {
+                                let self_obj_opt = self.env.borrow().get("self");
+                                if let Some(self_obj) = self_obj_opt
+                                    && let Value::Object { fields, .. } = self_obj {
                                         for (key, value) in temp_fields.borrow().iter() {
-                                            fields
-                                                .borrow_mut()
-                                                .insert(key.clone(), value.clone());
+                                            fields.borrow_mut().insert(key.clone(), value.clone());
                                         }
                                         if diagnostics::get_debug_level()
                                             == diagnostics::DebugLevel::Verbose
@@ -1380,17 +1421,13 @@ impl Interpreter {
                                             );
                                         }
                                     }
-                                }
 
                                 return Ok(Value::Null);
                             } else {
                                 if diagnostics::get_debug_level()
                                     == diagnostics::DebugLevel::Verbose
                                 {
-                                    eprintln!(
-                                        "CALL: Parent class '{}' has no 'new' method",
-                                        name
-                                    );
+                                    eprintln!("CALL: Parent class '{}' has no 'new' method", name);
                                 }
                             }
                         }
@@ -1410,17 +1447,14 @@ impl Interpreter {
                             ..
                         }) = class_val
                         {
-                            let parent_val =
-                                self.env.borrow().get(&parent_name);
+                            let parent_val = self.env.borrow().get(&parent_name);
                             if let Some(Value::Class {
                                 ref methods,
                                 ref name,
                                 ..
                             }) = parent_val
-                            {
-                                if let Some(ctor) = methods.get("new").cloned() {
-                                    let temp_fields =
-                                        Rc::new(RefCell::new(HashMap::new()));
+                                && let Some(ctor) = methods.get("new").cloned() {
+                                    let temp_fields = Rc::new(RefCell::new(HashMap::new()));
                                     let temp_obj = Value::Object {
                                         class: name.clone(),
                                         fields: temp_fields.clone(),
@@ -1432,14 +1466,11 @@ impl Interpreter {
 
                                     // Copy parent-initialised fields back to self
                                     for (key, value) in temp_fields.borrow().iter() {
-                                        fields
-                                            .borrow_mut()
-                                            .insert(key.clone(), value.clone());
+                                        fields.borrow_mut().insert(key.clone(), value.clone());
                                     }
 
                                     return Ok(Value::Null);
                                 }
-                            }
                         }
                     }
 
@@ -1509,10 +1540,7 @@ impl Interpreter {
                     } => {
                         if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                             eprintln!("CALL: Executing function '{}'", name);
-                            eprintln!(
-                                "CALL: Recursion depth before: {}",
-                                self.recursion_depth
-                            );
+                            eprintln!("CALL: Recursion depth before: {}", self.recursion_depth);
                         }
 
                         self.recursion_depth += 1;
@@ -1546,9 +1574,7 @@ impl Interpreter {
                                 env: env.clone(),
                             };
                             interpreter.env.borrow_mut().define(&name, self_ref);
-                            if diagnostics::get_debug_level()
-                                == diagnostics::DebugLevel::Verbose
-                            {
+                            if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
                                 eprintln!("CALL: Added self-reference '{}'", name);
                             }
                         }
@@ -1560,10 +1586,7 @@ impl Interpreter {
                                     if diagnostics::get_debug_level()
                                         == diagnostics::DebugLevel::Verbose
                                     {
-                                        eprintln!(
-                                            "CALL: Statement returned: {}",
-                                            value_fmt(&val)
-                                        );
+                                        eprintln!("CALL: Statement returned: {}", value_fmt(&val));
                                     }
                                     result = val;
                                 }
@@ -1608,25 +1631,16 @@ impl Interpreter {
                         }
 
                         self.recursion_depth -= 1;
-                        if diagnostics::get_debug_level()
-                            == diagnostics::DebugLevel::Verbose
-                        {
-                            eprintln!(
-                                "CALL: Function '{}' RETURNS {}",
-                                name,
-                                value_fmt(&result)
-                            );
-                            eprintln!(
-                                "CALL: Recursion depth after: {}",
-                                self.recursion_depth
-                            );
+                        if diagnostics::get_debug_level() == diagnostics::DebugLevel::Verbose {
+                            eprintln!("CALL: Function '{}' RETURNS {}", name, value_fmt(&result));
+                            eprintln!("CALL: Recursion depth after: {}", self.recursion_depth);
                         }
                         Ok(result)
                     }
                     _ => Err(RuntimeError::TypeMismatch),
                 }
             }
-	    Expr::Assign { name, value, .. } => {
+            Expr::Assign { name, value, .. } => {
                 let val = self.eval_expression(value)?;
                 self.env.borrow_mut().set(name, val.clone())?;
                 Ok(val)
@@ -1642,9 +1656,7 @@ impl Interpreter {
                         }
                     }
                     crate::parser::UnaryOp::Not => Ok(Value::Bool(!val.as_bool())),
-                    crate::parser::UnaryOp::Ref => {
-                        Ok(Value::Ref(Rc::new(RefCell::new(val))))
-                    }
+                    crate::parser::UnaryOp::Ref => Ok(Value::Ref(Rc::new(RefCell::new(val)))),
                     crate::parser::UnaryOp::Deref => match val {
                         Value::Ref(rc) => Ok(rc.borrow().clone()),
                         _ => Err(RuntimeError::TypeMismatch),
@@ -1697,17 +1709,13 @@ impl Interpreter {
                 BitAnd => Ok(Value::Int(l & r)),
                 ShiftLeft => {
                     if r < 0 {
-                        return Err(RuntimeError::ArgumentError(
-                            "Negative shift count".into(),
-                        ));
+                        return Err(RuntimeError::ArgumentError("Negative shift count".into()));
                     }
                     Ok(Value::Int(l << r))
                 }
                 ShiftRight => {
                     if r < 0 {
-                        return Err(RuntimeError::ArgumentError(
-                            "Negative shift count".into(),
-                        ));
+                        return Err(RuntimeError::ArgumentError("Negative shift count".into()));
                     }
                     Ok(Value::Int(l >> r))
                 }
@@ -1718,6 +1726,20 @@ impl Interpreter {
                 Concat => Ok(Value::Str(format!("{}{}", l, r).into())),
                 Eq => Ok(Value::Bool(l == r)),
                 Ne => Ok(Value::Bool(l != r)),
+                Match => {
+                    use regex::Regex;
+                    let re = Regex::new(&r).map_err(|e| {
+                        RuntimeError::InvalidOperation(format!("Invalid regex: {}", e))
+                    })?;
+                    Ok(Value::Bool(re.is_match(&l)))
+                }
+                NotMatch => {
+                    use regex::Regex;
+                    let re = Regex::new(&r).map_err(|e| {
+                        RuntimeError::InvalidOperation(format!("Invalid regex: {}", e))
+                    })?;
+                    Ok(Value::Bool(!re.is_match(&l)))
+                }
                 _ => Err(RuntimeError::InvalidOperation(format!("{:?}", op))),
             },
             (Value::Float(l), Value::Float(r)) => match op {
@@ -1782,28 +1804,23 @@ impl Interpreter {
                     match op {
                         Eq => {
                             return Ok(Value::Bool(
-                                matches!(left, Value::Null)
-                                    && matches!(right, Value::Null),
-                            ))
+                                matches!(left, Value::Null) && matches!(right, Value::Null),
+                            ));
                         }
                         Ne => {
                             return Ok(Value::Bool(
-                                !(matches!(left, Value::Null)
-                                    && matches!(right, Value::Null)),
-                            ))
+                                !(matches!(left, Value::Null) && matches!(right, Value::Null)),
+                            ));
                         }
                         _ => return Err(RuntimeError::TypeMismatch),
                     }
                 }
 
                 if matches!(op, Repeat) {
-                    if let Value::Int(n) = right {
-                        if n >= 0 {
-                            return Ok(Value::Str(
-                                left.as_str().repeat(n as usize).into(),
-                            ));
+                    if let Value::Int(n) = right
+                        && n >= 0 {
+                            return Ok(Value::Str(left.as_str().repeat(n as usize).into()));
                         }
-                    }
                     return Err(RuntimeError::TypeMismatch);
                 }
 
@@ -1904,10 +1921,7 @@ impl Interpreter {
                 // Map declared params to the remaining args
                 for (i, param) in params.iter().enumerate() {
                     if i < args.len() {
-                        interpreter
-                            .env
-                            .borrow_mut()
-                            .define(param, args[i].clone());
+                        interpreter.env.borrow_mut().define(param, args[i].clone());
                     } else {
                         interpreter.env.borrow_mut().define(param, Value::Null);
                     }
@@ -1994,8 +2008,7 @@ impl Interpreter {
                     Value::Array(a) => a.borrow(),
                     _ => return Err(RuntimeError::TypeMismatch),
                 };
-                let joined: String =
-                    arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
+                let joined: String = arr.iter().map(|v| v.as_str()).collect::<Vec<_>>().join(sep);
                 Ok(Value::Str(joined.into()))
             }
             "contains" => {
@@ -2071,10 +2084,8 @@ impl Interpreter {
                         let hash = hash.borrow();
                         let mut result = Vec::new();
                         for (k, v) in hash.iter() {
-                            let mapped = self.call_value(
-                                callback,
-                                &[Value::Str(k.clone().into()), v.clone()],
-                            )?;
+                            let mapped = self
+                                .call_value(callback, &[Value::Str(k.clone().into()), v.clone()])?;
                             result.push(mapped);
                         }
                         Ok(Value::Array(Rc::new(RefCell::new(result))))
@@ -2103,12 +2114,10 @@ impl Interpreter {
                     }
                     Value::Hash(hash) => {
                         let hash = hash.borrow();
-                        let mut result = std::collections::HashMap::new();
+                        let mut result = IndexMap::new();
                         for (k, v) in hash.iter() {
-                            let keep = self.call_value(
-                                callback,
-                                &[Value::Str(k.clone().into()), v.clone()],
-                            )?;
+                            let keep = self
+                                .call_value(callback, &[Value::Str(k.clone().into()), v.clone()])?;
                             if keep.as_bool() {
                                 result.insert(k.clone(), v.clone());
                             }
@@ -2237,5 +2246,55 @@ impl Interpreter {
                 ))),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use crate::value::Value;
+    use assert_matches::assert_matches;
+
+    fn eval(code: &str) -> Value {
+        use crate::parser::Stmt;
+
+        let lexer = Lexer::new(code);
+        let program = Parser::new(lexer).parse().expect("parse failed");
+        let mut interpreter = Interpreter::new();
+        let mut result = Value::Null;
+
+        for stmt in &program.statements {
+            match stmt {
+                Stmt::Expr(expr) => {
+                    result = interpreter
+                        .eval_expression(expr)
+                        .expect("eval expression failed");
+                }
+                _ => {
+                    result = interpreter
+                        .eval_statement(stmt)
+                        .expect("eval statement failed");
+                }
+            }
+        }
+
+        result
+    }
+
+    #[test]
+    fn evaluates_integer_arithmetic() {
+        assert_matches!(eval("1 + 2 * 3;"), Value::Int(7));
+    }
+
+    #[test]
+    fn evaluates_variable_assignment() {
+        assert_matches!(eval("let x = 42; x;"), Value::Int(42));
+    }
+
+    #[test]
+    fn evaluates_string_concatenation() {
+        assert_matches!(eval(r#""hello" + " world";"#), Value::Str(s) if s.as_str() == "hello world");
     }
 }

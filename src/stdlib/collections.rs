@@ -15,8 +15,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::eval::{Environment, RuntimeError};
 use crate::eval::interpreter::Interpreter;
+use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
 
 /// Unwrap Ref-wrapped values recursively to their inner value.
@@ -36,10 +36,7 @@ fn call_function(func: &Value, args: &[Value]) -> Result<Value, RuntimeError> {
     match func {
         Value::NativeFn(f) => f(args),
         Value::UserFn {
-            params,
-            body,
-            env,
-            ..
+            params, body, env, ..
         } => {
             let new_env = Environment::with_parent(env.clone());
             let mut interpreter = Interpreter::with_env(new_env);
@@ -61,9 +58,7 @@ fn call_function(func: &Value, args: &[Value]) -> Result<Value, RuntimeError> {
                         break;
                     }
                     Err(RuntimeError::BreakSignal) => {
-                        return Err(RuntimeError::InvalidOperation(
-                            "break outside loop".into(),
-                        ));
+                        return Err(RuntimeError::InvalidOperation("break outside loop".into()));
                     }
                     Err(RuntimeError::ContinueSignal) => {
                         return Err(RuntimeError::InvalidOperation(
@@ -150,7 +145,7 @@ pub fn sort(args: &[Value]) -> Result<Value, RuntimeError> {
             }
         });
     } else {
-        sorted.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+        sorted.sort_by_key(|a| a.as_str());
     }
 
     Ok(Value::Array(Rc::new(RefCell::new(sorted))))
