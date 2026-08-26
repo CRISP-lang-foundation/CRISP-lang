@@ -67,6 +67,30 @@ say fruits;                         # [apple, banana, cherry]
 say person;                         # {name: John, age: 30}
 ```
 
+### Comments
+
+CRISP supports multiple comment styles for flexibility:
+
+```crisp
+# Perl-style line comment (starts with #)
+// C++-style line comment (starts with //)
+/* C-style block comment
+   can span multiple lines */
+
+// Comment for the following item
+fn example() { /* ... */ }
+
+```
+
+| Style | Syntax | Purpose |
+|-------|--------|---------|
+| Perl-style | `# comment` | Line comments |
+| C++-style | `// comment` | Line comments |
+| C-style | `/* comment */` | Block comments (multi-line) |
+
+All comments are ignored by the interpreter.
+```
+
 ### Sigil Variables (Perl-style)
 
 ```crisp
