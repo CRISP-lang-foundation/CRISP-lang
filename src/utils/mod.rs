@@ -18,5 +18,3 @@ pub mod diagnostics;
 pub mod error;
 
 // Re-export
-pub use diagnostics::*;
-pub use error::*;

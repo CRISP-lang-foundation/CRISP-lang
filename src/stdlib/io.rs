@@ -20,7 +20,7 @@
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
 use std::fs;
-use std::io::{self, BufRead, Read, Write};
+use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::rc::Rc;
 

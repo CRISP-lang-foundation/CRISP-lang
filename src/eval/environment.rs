@@ -25,6 +25,12 @@ pub struct Environment {
     variables: HashMap<String, Value>,
 }
 
+impl Default for Environment {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Environment {
     pub fn new() -> Self {
         Environment {
@@ -97,6 +103,9 @@ impl Environment {
 
     /// Return all entries in this environment (not parent)
     pub fn entries(&self) -> Vec<(String, Value)> {
-        self.variables.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+        self.variables
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
     }
 }

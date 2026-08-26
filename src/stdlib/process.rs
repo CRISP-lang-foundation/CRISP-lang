@@ -14,7 +14,7 @@
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 pub fn register(env: &mut Environment) {
     // system() - run a command (like Perl)
@@ -52,7 +52,7 @@ pub fn register(env: &mut Environment) {
             {
                 use std::os::unix::process::CommandExt;
                 let err = Command::new(cmd).args(&args).exec();
-                return Err(RuntimeError::IOError(err.to_string()));
+                Err(RuntimeError::IOError(err.to_string()))
             }
 
             #[cfg(not(unix))]
@@ -114,7 +114,7 @@ pub fn register(env: &mut Environment) {
 
             #[cfg(unix)]
             {
-                use std::os::unix::process::CommandExt;
+                
                 let status = Command::new("sh")
                     .arg("-c")
                     .arg(cmd)

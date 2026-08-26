@@ -14,9 +14,11 @@
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
+
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
+
+use indexmap::IndexMap;
 
 pub fn register(env: &mut Environment) {
     env.define(
@@ -53,7 +55,7 @@ pub fn register(env: &mut Environment) {
     env.define(
         "environ",
         Value::NativeFn(|_| {
-            let mut hash = HashMap::new();
+            let mut hash = IndexMap::new();
             for (key, value) in std::env::vars() {
                 hash.insert(key, Value::Str(value.into()));
             }

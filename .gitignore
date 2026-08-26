@@ -3,22 +3,59 @@
 /target/
 **/*.rs.bk
 
-# LaTeX (the book)
+# LaTeX (the book) - all auxiliary files in any subdirectory
 
-ebook/*.aux
-ebook/*.log
-ebook/*.out
-ebook/*.toc
-ebook/*.lot
-ebook/*.lof
-ebook/*.bbl
-ebook/*.blg
-ebook/*.synctex.gz
-ebook/*.fdb_latexmk
-ebook/*.fls
-ebook/*.nav
-ebook/*.snm
-ebook/*.vrb
+# Standard LaTeX aux files
+ebook/**/*.aux
+ebook/**/*.log
+ebook/**/*.out
+ebook/**/*.toc
+ebook/**/*.lot
+ebook/**/*.lof
+ebook/**/*.bbl
+ebook/**/*.blg
+ebook/**/*.synctex.gz
+ebook/**/*.fdb_latexmk
+ebook/**/*.fls
+ebook/**/*.nav
+ebook/**/*.snm
+ebook/**/*.vrb
+
+# Additional LaTeX aux files
+ebook/**/*.idx
+ebook/**/*.ind
+ebook/**/*.ilg
+ebook/**/*.ist
+ebook/**/*.glg
+ebook/**/*.glo
+ebook/**/*.gls
+ebook/**/*.glsdefs
+ebook/**/*.acn
+ebook/**/*.acr
+ebook/**/*.alg
+ebook/**/*.brf
+ebook/**/*.dvi
+ebook/**/*.ps
+ebook/**/*.pdf
+ebook/**/*.xdv
+ebook/**/*.lol
+ebook/**/*.lol
+ebook/**/*.fff
+ebook/**/*.ttt
+
+# PDF output (optional - remove if you want to track the PDF)
+# ebook/**/*.pdf
+
+# TEXMFCACHE directories
+ebook/**/texmfcache/
+**/texmfcache/
+
+# Editor/OS junk files
+ebook/**/*.swp
+ebook/**/*.swo
+ebook/**/*.~*
+ebook/**/Thumbs.db
+ebook/**/.DS_Store
 
 # Keep the compiled PDF (optional — remove if you want to ignore it too)
 # docs/*.pdf

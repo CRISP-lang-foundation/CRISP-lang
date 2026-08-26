@@ -16,15 +16,13 @@
 //!
 //! This module contains basic built-in functions.
 
-use crate::eval::{Environment, RuntimeError};
-use crate::value::Value;
+use crate::eval::Environment;
 
 pub struct Builtins;
 
 impl Builtins {
-    pub fn register(env: &mut Environment) {
+    pub fn register(_env: &mut Environment) {
         // Basic functions are already registered in stdlib
         // This is just a placeholder for any additional built-in functions
     }
 }
-

@@ -21,5 +21,5 @@ mod error;
 pub mod interpreter;
 
 pub use environment::Environment;
-pub use error::{EvalError, RuntimeError};
+pub use error::RuntimeError;
 pub use interpreter::Interpreter;

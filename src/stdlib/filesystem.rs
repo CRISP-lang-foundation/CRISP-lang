@@ -15,8 +15,7 @@
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
 use std::cell::RefCell;
-use std::fs::{self, DirEntry};
-use std::io::{BufRead, BufReader, Write};
+use std::fs::{self};
 use std::path::Path;
 use std::rc::Rc;
 

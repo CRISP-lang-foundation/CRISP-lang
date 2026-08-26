@@ -20,7 +20,7 @@ use rustyline::config::Configurer;
 use rustyline::{DefaultEditor, EditMode, error::ReadlineError};
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
-    println!("{}", "🦀 CRISP v0.1.5 - 2026".cyan().bold());
+    println!("{}", "🦀 CRISP v0.1.7 - 2026".cyan().bold());
     println!(
         "{}",
         "Creative Rust Implemented Scripting Paradigm".dimmed()
@@ -129,14 +129,14 @@ fn is_complete(code: &str) -> bool {
     if trimmed.is_empty() {
         return false;
     }
-    
+
     // Check for balanced braces, parens, brackets (ignoring strings)
     let mut parens = 0;
     let mut braces = 0;
     let mut brackets = 0;
     let mut in_string = false;
     let mut escape = false;
-    
+
     for ch in trimmed.chars() {
         if escape {
             escape = false;
@@ -154,50 +154,58 @@ fn is_complete(code: &str) -> bool {
             _ => {}
         }
     }
-    
+
     // If braces/parens/brackets are not balanced, we need more input
     if parens != 0 || braces != 0 || brackets != 0 {
         return false;
     }
-    
+
     // Get the last non-whitespace character
     let last_char = trimmed.chars().last().unwrap_or(' ');
-    
+
     // CRITICAL: For multi-statement input, make sure ALL statements are complete
     // A program is complete if:
     // 1. It ends with ';' or '}'
     // 2. There are no unclosed control flow structures
     let semicolon_count = trimmed.matches(';').count();
-    
+
     // If there's at least one semicolon and the last character is not ';' or '}',
     // the last statement is incomplete - wait for more input
     if semicolon_count > 0 && last_char != ';' && last_char != '}' {
         return false;
     }
-    
+
     // Check for control flow keywords that need blocks
     let has_unclosed_if = trimmed.contains("if") && !trimmed.contains('{') && last_char != ';';
-    let has_unclosed_while = trimmed.contains("while") && !trimmed.contains('{') && last_char != ';';
+    let has_unclosed_while =
+        trimmed.contains("while") && !trimmed.contains('{') && last_char != ';';
     let has_unclosed_for = trimmed.contains("for") && !trimmed.contains('{') && last_char != ';';
-    let has_unclosed_match = trimmed.contains("match") && !trimmed.contains('{') && last_char != ';';
+    let has_unclosed_match =
+        trimmed.contains("match") && !trimmed.contains('{') && last_char != ';';
     let has_unclosed_try = trimmed.contains("try") && !trimmed.contains('{') && last_char != ';';
-    
-    if has_unclosed_if || has_unclosed_while || has_unclosed_for || 
-       has_unclosed_match || has_unclosed_try {
+
+    if has_unclosed_if
+        || has_unclosed_while
+        || has_unclosed_for
+        || has_unclosed_match
+        || has_unclosed_try
+    {
         return false;
     }
-    
+
     // For multi-line input, ensure the last line ends with a semicolon or closing brace
-    let lines: Vec<&str> = trimmed.lines().filter(|line| !line.trim().is_empty()).collect();
-    if lines.len() > 1 {
-        if let Some(last_line) = lines.last() {
+    let lines: Vec<&str> = trimmed
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect();
+    if lines.len() > 1
+        && let Some(last_line) = lines.last() {
             let last_trimmed = last_line.trim();
             if !last_trimmed.ends_with(';') && !last_trimmed.ends_with('}') {
                 return false;
             }
         }
-    }
-    
+
     // Single statement - complete if it ends with ; or }
     last_char == ';' || last_char == '}'
 }
