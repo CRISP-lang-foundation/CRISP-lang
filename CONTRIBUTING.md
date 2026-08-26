@@ -41,7 +41,7 @@ Be respectful, constructive, and collaborative. Assume good faith and focus on t
 git clone https://github.com/user/crisp.git
 cd crisp
 cargo build
-cargo test
+cargo test --lib
 ```
 
 ### Run CRISP
@@ -129,7 +129,7 @@ CRISP uses a multi-branch workflow to keep development organized and stable:
 
 4. **Run tests before pushing:**
    ```bash
-   cargo test
+   cargo test --lib
    cargo clippy
    cargo fmt -- --check
    ```
@@ -251,7 +251,7 @@ perf(interpreter): cache regex compilation results
 ### Running Tests
 
 ```bash
-cargo test                  # All tests
+cargo test --lib                  # All tests
 cargo test --test <name>    # Specific integration test
 cargo test <unit_test_name> # Specific unit test
 ```
