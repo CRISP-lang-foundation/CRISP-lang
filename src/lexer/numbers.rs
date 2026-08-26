@@ -24,80 +24,81 @@
 use crate::lexer::TokenKind;
 use crate::lexer::ParseResult;
 
-/// Parse a number literal with optional prefix
-///
+
 /// # Examples
 /// ```
-/// use crisp::lexer::numbers::parse_number;
+/// use crisp::lexer::parse_number;
+/// use crisp::lexer::TokenKind;
 ///
 /// let result = parse_number("42");
-/// assert!(matches!(result, Ok(TokenKind::Int(42))));
+/// assert!(matches!(result, Ok(TokenKind::Int(ref s)) if s == "42"));
 ///
 /// let result = parse_number("0o644");
-/// assert!(matches!(result, Ok(TokenKind::Int(420))));
+/// assert!(matches!(result, Ok(TokenKind::Int(ref s)) if s == "420"));
 ///
 /// let result = parse_number("0x1A3F");
-/// assert!(matches!(result, Ok(TokenKind::Int(6719))));
+/// assert!(matches!(result, Ok(TokenKind::Int(ref s)) if s == "6719"));
 ///
 /// let result = parse_number("0b1010");
-/// assert!(matches!(result, Ok(TokenKind::Int(10))));
+/// assert!(matches!(result, Ok(TokenKind::Int(ref s)) if s == "10"));
 /// ```
+
 pub fn parse_number(input: &str) -> ParseResult {
-    let chars: Vec<char> = input.chars().collect();
-    let mut i = 0;
-    let mut has_dot = false;
-    let mut has_exponent = false;
-    
-    // Skip optional sign
-    if i < chars.len() && (chars[i] == '-' || chars[i] == '+') {
-        i += 1;
-    }
-    
-    // Read integer part
-    while i < chars.len() && chars[i].is_ascii_digit() {
-        i += 1;
-    }
-    
-    // Read fractional part
-    if i < chars.len() && chars[i] == '.' {
-        has_dot = true;
-        i += 1;
-        while i < chars.len() && chars[i].is_ascii_digit() {
-            i += 1;
-        }
-    }
-    
-    // Read exponent (scientific notation)
-    if i < chars.len() && (chars[i] == 'e' || chars[i] == 'E') {
-        has_exponent = true;
-        i += 1;
-        if i < chars.len() && (chars[i] == '-' || chars[i] == '+') {
-            i += 1;
-        }
-        while i < chars.len() && chars[i].is_ascii_digit() {
-            i += 1;
-        }
-    }
-    
-    let num_str = &input[0..i];
-    
-    if has_dot || has_exponent {
-        // Parse as floating-point number
-        if let Ok(num) = num_str.parse::<f64>() {
-            return Ok(TokenKind::Float(num.to_string()));
-        }
+    // Remove numeric separators before parsing.
+    let cleaned: String = input.chars().filter(|&c| c != '_').collect();
+    let s = cleaned.as_str();
+
+    let (sign, rest) = if let Some(r) = s.strip_prefix('-') {
+        ("-", r)
+    } else if let Some(r) = s.strip_prefix('+') {
+        ("", r)
     } else {
-        // Parse as integer
-        if let Ok(num) = num_str.parse::<i64>() {
-            return Ok(TokenKind::Int(num.to_string()));
+        ("", s)
+    };
+
+    let lower = rest.to_ascii_lowercase();
+
+    if let Some(hex) = lower.strip_prefix("0x") {
+        if hex.is_empty() {
+            return Err(format!("Invalid hexadecimal literal: {}", input));
         }
+        let magnitude = i64::from_str_radix(hex, 16)
+            .map_err(|e| format!("Invalid hexadecimal literal '{}': {}", input, e))?;
+        let value = if sign == "-" { -magnitude } else { magnitude };
+        return Ok(TokenKind::Int(value.to_string()));
     }
-    
-    // Fallback - return the original string
-    if has_dot || has_exponent {
-        Ok(TokenKind::Float(num_str.to_string()))
+
+    if let Some(oct) = lower.strip_prefix("0o") {
+        if oct.is_empty() {
+            return Err(format!("Invalid octal literal: {}", input));
+        }
+        let magnitude = i64::from_str_radix(oct, 8)
+            .map_err(|e| format!("Invalid octal literal '{}': {}", input, e))?;
+        let value = if sign == "-" { -magnitude } else { magnitude };
+        return Ok(TokenKind::Int(value.to_string()));
+    }
+
+    if let Some(bin) = lower.strip_prefix("0b") {
+        if bin.is_empty() {
+            return Err(format!("Invalid binary literal: {}", input));
+        }
+        let magnitude = i64::from_str_radix(bin, 2)
+            .map_err(|e| format!("Invalid binary literal '{}': {}", input, e))?;
+        let value = if sign == "-" { -magnitude } else { magnitude };
+        return Ok(TokenKind::Int(value.to_string()));
+    }
+
+    // Decimal float or integer.
+    if rest.contains('.') || rest.contains('e') || rest.contains('E') {
+        let value = s
+            .parse::<f64>()
+            .map_err(|e| format!("Invalid float literal '{}': {}", input, e))?;
+        Ok(TokenKind::Float(value.to_string()))
     } else {
-        Ok(TokenKind::Int(num_str.to_string()))
+        let value = s
+            .parse::<i64>()
+            .map_err(|e| format!("Invalid integer literal '{}': {}", input, e))?;
+        Ok(TokenKind::Int(value.to_string()))
     }
 }
 
@@ -113,32 +114,29 @@ pub fn has_number_prefix(s: &str) -> bool {
 
 /// Check if a string is a valid number literal (for quick validation)
 pub fn is_number_literal(s: &str) -> bool {
-    // Remove underscores for validation
     let cleaned: String = s.chars().filter(|&c| c != '_').collect();
+    let c = cleaned.as_str();
 
-    // Check prefixes
-    if cleaned.starts_with("0o") || cleaned.starts_with("0O") {
-        return cleaned[2..].chars().all(|c| c.is_digit(8));
+    if let Some(rest) = c.strip_prefix("0o").or_else(|| c.strip_prefix("0O")) {
+        return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(8));
     }
-    if cleaned.starts_with("0x") || cleaned.starts_with("0X") {
-        return cleaned[2..].chars().all(|c| c.is_digit(16));
+    if let Some(rest) = c.strip_prefix("0x").or_else(|| c.strip_prefix("0X")) {
+        return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(16));
     }
-    if cleaned.starts_with("0b") || cleaned.starts_with("0B") {
-        return cleaned[2..].chars().all(|c| c.is_digit(2));
+    if let Some(rest) = c.strip_prefix("0b").or_else(|| c.strip_prefix("0B")) {
+        return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(2));
     }
 
-    // Check if it's a float
-    if cleaned.contains('.') {
-        let parts: Vec<&str> = cleaned.split('.').collect();
-        if parts.len() != 2 {
+    if c.contains('.') {
+        let parts: Vec<&str> = c.split('.').collect();
+        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
             return false;
         }
-        return parts[0].chars().all(|c| c.is_digit(10))
-            && parts[1].chars().all(|c| c.is_digit(10));
+        return parts[0].chars().all(|d| d.is_digit(10))
+            && parts[1].chars().all(|d| d.is_digit(10));
     }
 
-    // Integer
-    cleaned.chars().all(|c| c.is_digit(10))
+    !c.is_empty() && c.chars().all(|d| d.is_digit(10))
 }
 
 #[cfg(test)]
@@ -148,49 +146,49 @@ mod tests {
     #[test]
     fn test_parse_decimal() {
         let result = parse_number("42").unwrap();
-        assert!(matches!(result, TokenKind::Int(42)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "42"));
 
         let result = parse_number("-42").unwrap();
-        assert!(matches!(result, TokenKind::Int(-42)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "-42"));
 
         let result = parse_number("1_000_000").unwrap();
-        assert!(matches!(result, TokenKind::Int(1000000)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "1000000"));
     }
 
     #[test]
     fn test_parse_octal() {
         let result = parse_number("0o644").unwrap();
-        assert!(matches!(result, TokenKind::Int(420)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "420"));
 
         let result = parse_number("0O755").unwrap();
-        assert!(matches!(result, TokenKind::Int(493)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "493"));
     }
 
     #[test]
     fn test_parse_hex() {
         let result = parse_number("0x1A3F").unwrap();
-        assert!(matches!(result, TokenKind::Int(6719)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "6719"));
 
         let result = parse_number("0XFF").unwrap();
-        assert!(matches!(result, TokenKind::Int(255)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "255"));
     }
 
     #[test]
     fn test_parse_binary() {
         let result = parse_number("0b1010").unwrap();
-        assert!(matches!(result, TokenKind::Int(10)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "10"));
 
         let result = parse_number("0B1111").unwrap();
-        assert!(matches!(result, TokenKind::Int(15)));
+        assert!(matches!(result, TokenKind::Int(ref s) if s == "15"));
     }
 
     #[test]
     fn test_parse_float() {
         let result = parse_number("3.14").unwrap();
-        assert!(matches!(result, TokenKind::Float(3.14)));
+        assert!(matches!(result, TokenKind::Float(ref s) if s == "3.14"));
 
         let result = parse_number("-2.5").unwrap();
-        assert!(matches!(result, TokenKind::Float(-2.5)));
+        assert!(matches!(result, TokenKind::Float(ref s) if s == "-2.5"));
     }
 
     #[test]

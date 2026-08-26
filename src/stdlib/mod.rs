@@ -374,3 +374,47 @@ fn call_value_direct(func: &Value, args: &[Value]) -> Result<Value, RuntimeError
         )),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eval::Interpreter;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use crate::value::Value;
+    use assert_matches::assert_matches;
+
+    
+    fn eval(code: &str) -> Value {
+	use crate::parser::Stmt;
+	
+	let lexer = Lexer::new(code);
+	let program = Parser::new(lexer).parse().expect("parse failed");
+	let mut interpreter = Interpreter::new();
+	let mut result = Value::Null;
+
+	for stmt in &program.statements {
+            match stmt {
+		Stmt::Expr(expr) => {
+                    result = interpreter
+			.eval_expression(expr)
+			.expect("eval expression failed");
+		}
+		_ => {
+                    result = interpreter
+			.eval_statement(stmt)
+			.expect("eval statement failed");
+		}
+            }
+	}
+	
+	result
+    }
+
+
+    #[test]
+    fn len_works_on_strings_and_arrays() {
+        assert_matches!(eval(r#"len("abc");"#), Value::Int(3));
+        assert_matches!(eval("len([1, 2, 3, 4]);"), Value::Int(4));
+    }
+}

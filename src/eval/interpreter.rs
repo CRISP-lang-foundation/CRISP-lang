@@ -2309,3 +2309,53 @@ impl Interpreter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Lexer;
+    use crate::parser::Parser;
+    use crate::value::Value;
+    use assert_matches::assert_matches;
+
+    fn eval(code: &str) -> Value {
+	use crate::parser::Stmt;
+
+	let lexer = Lexer::new(code);
+	let program = Parser::new(lexer).parse().expect("parse failed");
+	let mut interpreter = Interpreter::new();
+	let mut result = Value::Null;
+	
+	for stmt in &program.statements {
+            match stmt {
+		Stmt::Expr(expr) => {
+                    result = interpreter
+			.eval_expression(expr)
+			.expect("eval expression failed");
+		}
+		_ => {
+                    result = interpreter
+			.eval_statement(stmt)
+			.expect("eval statement failed");
+		}
+            }
+	}
+	
+	result
+    }
+
+    #[test]
+    fn evaluates_integer_arithmetic() {
+        assert_matches!(eval("1 + 2 * 3;"), Value::Int(7));
+    }
+
+    #[test]
+    fn evaluates_variable_assignment() {
+        assert_matches!(eval("let x = 42; x;"), Value::Int(42));
+    }
+
+    #[test]
+    fn evaluates_string_concatenation() {
+        assert_matches!(eval(r#""hello" + " world";"#), Value::Str(s) if s.as_str() == "hello world");
+    }
+}

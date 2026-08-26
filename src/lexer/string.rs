@@ -26,6 +26,8 @@ use crate::lexer::ParseResult;
 ///
 /// # Examples
 /// ```
+/// use crisp::lexer::process_escapes;
+///
 /// let s = "Hello\\nWorld";
 /// let processed = process_escapes(s);
 /// assert_eq!(processed, "Hello\nWorld");
@@ -116,6 +118,8 @@ pub fn parse_string(input: &str) -> ParseResult {
 ///
 /// # Examples
 /// ```
+/// use crisp::lexer::unquote;
+///
 /// let s = "\"hello\"";
 /// let unquoted = unquote(s);
 /// assert_eq!(unquoted, "hello");

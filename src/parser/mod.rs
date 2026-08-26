@@ -119,3 +119,32 @@ impl Parser {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Lexer;
+
+    fn parse(code: &str) -> Program {
+        let lexer = Lexer::new(code);
+        let mut parser = Parser::new(lexer);
+        parser.parse().expect("parse failed")
+    }
+
+    #[test]
+    fn parses_let_statement() {
+        let program = parse("let x = 5;");
+        assert_eq!(program.statements.len(), 1);
+        assert!(
+            matches!(&program.statements[0], Stmt::Let { name, .. } if name == "x")
+        );
+    }
+
+    #[test]
+    fn parses_arithmetic_expression() {
+        let program = parse("let y = 1 + 2 * 3;");
+        assert_eq!(program.statements.len(), 1);
+        // Optionally match against Expr::Binary if you expose AST internals
+        assert!(matches!(program.statements[0], Stmt::Let { .. }));
+    }
+}

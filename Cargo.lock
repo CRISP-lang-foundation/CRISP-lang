@@ -323,6 +323,7 @@ dependencies = [
  "colored",
  "env_logger",
  "hex",
+ "indexmap",
  "libc",
  "log",
  "logos",
