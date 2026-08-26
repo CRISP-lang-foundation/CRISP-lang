@@ -17,17 +17,11 @@
 //! This module is responsible for tokenizing CRISP source code.
 //! It uses the `logos` crate for efficient token generation.
 
-mod token;
-mod string;
 mod numbers;
+mod string;
+mod token;
 
-pub use token::Span;
 pub use token::{Token, TokenKind};
-pub use string::process_escapes;
-pub use string::unquote;
-pub use string::parse_string;
-pub use numbers::parse_number;
-pub use numbers::has_number_prefix;
 
 use crate::utils::diagnostics;
 use logos::Logos;
@@ -52,19 +46,19 @@ impl Lexer {
         let source = source.to_string();
         let mut tokens = Vec::new();
         let mut lex = TokenKind::lexer(&source);
-        
+
         if diagnostics::is_debug_mode() {
             diagnostics::log_debug(&format!("Processing: '{}'", source));
         }
-        
+
         while let Some(Ok(tok)) = lex.next() {
             let span = lex.span();
             let slice = &source[span.clone()];
-            
+
             if diagnostics::is_debug_mode() {
                 diagnostics::log_debug(&format!("  Token: {:?} = '{}'", tok, slice));
             }
-            
+
             // Process string literals to handle escape sequences
             let processed_tok = match tok {
                 TokenKind::StringLit(s) => {
@@ -91,25 +85,25 @@ impl Lexer {
                 }
                 _ => tok,
             };
-            
+
             tokens.push(Token {
-		kind: processed_tok,
-		span,
+                kind: processed_tok,
+                span,
             });
-	}
-        
+        }
+
         if diagnostics::is_debug_mode() {
             diagnostics::log_debug(&format!("Total {} tokens", tokens.len()));
         }
-        
+
         Lexer { tokens, source }
     }
-    
+
     /// Get the list of tokens
     pub fn tokens(&self) -> &[Token] {
         &self.tokens
     }
-    
+
     /// Get the source code
     pub fn source(&self) -> &str {
         &self.source
@@ -122,42 +116,42 @@ mod tests {
 
     #[test]
     fn test_string_with_escapes() {
-	let input = r#""Hello\nWorld""#;
-	let lexer = Lexer::new(input);
-	let tokens = lexer.tokens();
-	assert_eq!(tokens.len(), 1);
-	if let TokenKind::StringLit(s) = &tokens[0].kind {
+        let input = r#""Hello\nWorld""#;
+        let lexer = Lexer::new(input);
+        let tokens = lexer.tokens();
+        assert_eq!(tokens.len(), 1);
+        if let TokenKind::StringLit(s) = &tokens[0].kind {
             assert_eq!(s, "\"Hello\nWorld\"");
-	} else {
+        } else {
             panic!("Expected StringLit");
-	}
+        }
     }
-    
+
     #[test]
     fn test_string_with_tab() {
-	let input = r#""Hello\tWorld""#;
-	let lexer = Lexer::new(input);
-	let tokens = lexer.tokens();
-	assert_eq!(tokens.len(), 1);
-	if let TokenKind::StringLit(s) = &tokens[0].kind {
+        let input = r#""Hello\tWorld""#;
+        let lexer = Lexer::new(input);
+        let tokens = lexer.tokens();
+        assert_eq!(tokens.len(), 1);
+        if let TokenKind::StringLit(s) = &tokens[0].kind {
             assert_eq!(s, "\"Hello\tWorld\"");
-	} else {
+        } else {
             panic!("Expected StringLit");
-	}
+        }
     }
-    
+
     #[test]
     fn test_string_with_backslash() {
-	let input = r#""Hello\World""#;
-	let lexer = Lexer::new(input);
-	let tokens = lexer.tokens();
-	assert_eq!(tokens.len(), 1);
-	if let TokenKind::StringLit(s) = &tokens[0].kind {
+        let input = r#""Hello\World""#;
+        let lexer = Lexer::new(input);
+        let tokens = lexer.tokens();
+        assert_eq!(tokens.len(), 1);
+        if let TokenKind::StringLit(s) = &tokens[0].kind {
             // \W is not a recognized escape, so process_escapes drops the backslash
             assert_eq!(s, "\"HelloWorld\"");
-	} else {
+        } else {
             panic!("Expected StringLit");
-	}
+        }
     }
 
     #[test]
@@ -176,9 +170,9 @@ mod tests {
 
     #[test]
     fn test_division_not_confused_with_regex() {
-	let lexer = Lexer::new("10 / 2; 20 / 4;");
-	let tokens = lexer.tokens();
-	// Int, Slash, Int, Semicolon, Int, Slash, Int, Semicolon
-	assert!(tokens.iter().any(|t| matches!(t.kind, TokenKind::Slash)));
+        let lexer = Lexer::new("10 / 2; 20 / 4;");
+        let tokens = lexer.tokens();
+        // Int, Slash, Int, Semicolon, Int, Slash, Int, Semicolon
+        assert!(tokens.iter().any(|t| matches!(t.kind, TokenKind::Slash)));
     }
 }

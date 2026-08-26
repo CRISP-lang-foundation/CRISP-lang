@@ -27,7 +27,7 @@ mod value;
 
 use clap::Parser;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use utils::diagnostics;
 
 #[derive(Parser)]
@@ -101,7 +101,10 @@ fn run_main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_file(file: &PathBuf, print_ast: bool) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(ext) = file.extension() {
         if ext != "csp" && ext != "crisp" {
-            eprintln!("⚠Warning: File '{}' has non-standard extension", file.display());
+            eprintln!(
+                "⚠Warning: File '{}' has non-standard extension",
+                file.display()
+            );
             eprintln!("   Expected: .csp or .crisp");
         }
     } else {

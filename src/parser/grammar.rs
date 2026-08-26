@@ -148,12 +148,12 @@ impl Parser {
                 let name = s;
 
                 // ─── Contextual keyword: new ClassName(args) → Expr::Object ───
-                if name == "new" {
-                    if let TokenKind::Ident(class_name) = self.peek() {
+                if name == "new"
+                    && let TokenKind::Ident(class_name) = self.peek() {
                         let class_name = class_name.clone();
                         self.advance();
                         let mut args = Vec::new();
-                        let mut named_args = Vec::new();
+                        let named_args = Vec::new();
                         if self.peek() == TokenKind::LParen {
                             self.advance();
                             if self.peek() != TokenKind::RParen {
@@ -177,7 +177,6 @@ impl Parser {
                         self.maybe_consume_semicolon();
                         return Ok(Stmt::Expr(Box::new(expr)));
                     }
-                }
 
                 // Build identifier + postfix chain
                 let expr = Expr::Var {
@@ -199,12 +198,10 @@ impl Parser {
                                 value: Box::new(value),
                             })))
                         }
-                        Expr::Var { .. } => {
-                            Ok(Stmt::Assign {
-                                name,
-                                expr: Box::new(value),
-                            })
-                        }
+                        Expr::Var { .. } => Ok(Stmt::Assign {
+                            name,
+                            expr: Box::new(value),
+                        }),
                         _ => Err(ParseError {
                             message: "Invalid left-hand side of assignment".into(),
                             span: None,
@@ -368,7 +365,11 @@ impl Parser {
                 vec![Stmt::Return(Some(Box::new(expr)))]
             };
 
-            arms.push(MatchArm { pattern, guard, body });
+            arms.push(MatchArm {
+                pattern,
+                guard,
+                body,
+            });
 
             // Optional trailing comma
             if self.peek() == TokenKind::Comma {
@@ -704,7 +705,8 @@ impl Parser {
                 self.advance();
                 VarType::Array
             }
-            TokenKind::Modulo => {  // Hash sigil (same as modulo operator, context-dependent)
+            TokenKind::Modulo => {
+                // Hash sigil (same as modulo operator, context-dependent)
                 self.advance();
                 VarType::Hash
             }
@@ -829,26 +831,22 @@ impl Parser {
     /// This handles both variable assignment (x = 5) and field assignment (self.x = 5)
     fn parse_assignment(&mut self) -> Result<Expr, ParseError> {
         let left = self.parse_ternary()?;
-        
+
         if self.peek() == TokenKind::Equal {
             self.advance(); // consume '='
             let right = self.parse_expression()?;
-            
+
             match left {
-                Expr::FieldAccess { object, field } => {
-                    Ok(Expr::FieldAssign {
-                        object,
-                        field,
-                        value: Box::new(right),
-                    })
-                }
-                Expr::Var { name, sigil } => {
-                    Ok(Expr::Assign {
-                        name,
-                        sigil,
-                        value: Box::new(right),
-                    })
-                }
+                Expr::FieldAccess { object, field } => Ok(Expr::FieldAssign {
+                    object,
+                    field,
+                    value: Box::new(right),
+                }),
+                Expr::Var { name, sigil } => Ok(Expr::Assign {
+                    name,
+                    sigil,
+                    value: Box::new(right),
+                }),
                 _ => Err(ParseError {
                     message: "Invalid left-hand side of assignment".into(),
                     span: None,
@@ -969,7 +967,7 @@ impl Parser {
             TokenKind::Ampersand => Ok(BinaryOp::BitAnd),
             TokenKind::ShiftLeft => Ok(BinaryOp::ShiftLeft),
             TokenKind::ShiftRight => Ok(BinaryOp::ShiftRight),
-            TokenKind::MatchOp => Ok(BinaryOp::Match),      // Added =~ operator
+            TokenKind::MatchOp => Ok(BinaryOp::Match), // Added =~ operator
             TokenKind::Dot => Ok(BinaryOp::Concat),
             TokenKind::Ident(s) if s == "x" => Ok(BinaryOp::Repeat),
             TokenKind::NotMatchOp => Ok(BinaryOp::NotMatch), // Added !~ operator
@@ -1181,7 +1179,7 @@ impl Parser {
                 self.advance();
                 // Parse s/pattern/replacement/flags
                 let (pattern, replacement, global) = self.parse_substitution()?;
-                
+
                 // Default target is $_ (or could be a variable)
                 let text = if let TokenKind::Ident(ref n) = self.peek() {
                     if n == "_" {
@@ -1202,7 +1200,7 @@ impl Parser {
                         sigil: Some(VarType::Scalar),
                     }
                 };
-                
+
                 Ok(Expr::Substitute {
                     text: Box::new(text),
                     pattern: Box::new(Expr::Str(pattern)),
@@ -1217,12 +1215,12 @@ impl Parser {
                 let name = s;
 
                 // ─── Contextual keyword: new ClassName(args) → Expr::Object ───
-                if name == "new" {
-                    if let TokenKind::Ident(class_name) = self.peek() {
+                if name == "new"
+                    && let TokenKind::Ident(class_name) = self.peek() {
                         let class_name = class_name.clone();
                         self.advance();
                         let mut args = Vec::new();
-                        let mut named_args = Vec::new();
+                        let named_args = Vec::new();
                         if self.peek() == TokenKind::LParen {
                             self.advance();
                             if self.peek() != TokenKind::RParen {
@@ -1244,13 +1242,9 @@ impl Parser {
                         };
                         return self.parse_postfix(expr);
                     }
-                }
 
                 // Regular identifier
-                let expr = Expr::Var {
-                    name,
-                    sigil: None,
-                };
+                let expr = Expr::Var { name, sigil: None };
                 self.parse_postfix(expr)
             }
 
@@ -1300,15 +1294,15 @@ impl Parser {
                 '/'
             }
         };
-        
+
         // Parse pattern
         let pattern = self.parse_until_delimiter(delimiter)?;
         self.expect_delimiter(delimiter)?;
-        
+
         // Parse replacement
         let replacement = self.parse_until_delimiter(delimiter)?;
         self.expect_delimiter(delimiter)?;
-        
+
         // Parse flags
         let mut global = false;
         while !self.is_at_end() {
@@ -1316,10 +1310,10 @@ impl Parser {
                 TokenKind::Ident(ref flag) => {
                     match flag.as_str() {
                         "g" => global = true,
-                        "i" => {}  // Case insensitive (TODO)
-                        "m" => {}  // Multiline (TODO)
-                        "s" => {}  // Single line (TODO)
-                        "e" => {}  // Evaluate replacement (TODO)
+                        "i" => {} // Case insensitive (TODO)
+                        "m" => {} // Multiline (TODO)
+                        "s" => {} // Single line (TODO)
+                        "e" => {} // Evaluate replacement (TODO)
                         _ => break,
                     }
                     self.advance();
@@ -1327,13 +1321,13 @@ impl Parser {
                 _ => break,
             }
         }
-        
+
         Ok((pattern, replacement, global))
     }
 
     fn parse_until_delimiter(&mut self, delimiter: char) -> Result<String, ParseError> {
         let mut content = String::new();
-        
+
         while !self.is_at_end() {
             match self.peek() {
                 TokenKind::Backslash => {
@@ -1364,7 +1358,7 @@ impl Parser {
                 }
             }
         }
-        
+
         Ok(content)
     }
 
@@ -1444,7 +1438,7 @@ impl Parser {
                             }
                         }
                         self.expect(TokenKind::RParen)?;
-                        
+
                         expr = Expr::MethodCall {
                             object: Box::new(expr),
                             method,

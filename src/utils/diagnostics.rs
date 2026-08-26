@@ -224,6 +224,12 @@ pub struct DiagnosticsCollector {
     debug_enabled: bool,
 }
 
+impl Default for DiagnosticsCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DiagnosticsCollector {
     pub fn new() -> Self {
         DiagnosticsCollector {
@@ -299,7 +305,7 @@ impl DiagnosticsCollector {
 // --- Global diagnostic logger ---
 
 thread_local! {
-    static DIAGNOSTICS: RefCell<Option<Rc<RefCell<DiagnosticsCollector>>>> = RefCell::new(None);
+    static DIAGNOSTICS: RefCell<Option<Rc<RefCell<DiagnosticsCollector>>>> = const { RefCell::new(None) };
 }
 
 pub fn init_diagnostics(debug: bool) {

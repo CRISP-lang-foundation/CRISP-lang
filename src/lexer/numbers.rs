@@ -21,9 +21,8 @@
 //! - Binary literals (0b1010)
 //! - Numeric separators (1_000_000)
 
-use crate::lexer::TokenKind;
 use crate::lexer::ParseResult;
-
+use crate::lexer::TokenKind;
 
 /// # Examples
 /// ```
@@ -121,7 +120,7 @@ pub fn is_number_literal(s: &str) -> bool {
         return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(8));
     }
     if let Some(rest) = c.strip_prefix("0x").or_else(|| c.strip_prefix("0X")) {
-        return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(16));
+        return !rest.is_empty() && rest.chars().all(|ch| ch.is_ascii_hexdigit());
     }
     if let Some(rest) = c.strip_prefix("0b").or_else(|| c.strip_prefix("0B")) {
         return !rest.is_empty() && rest.chars().all(|ch| ch.is_digit(2));
@@ -132,11 +131,11 @@ pub fn is_number_literal(s: &str) -> bool {
         if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
             return false;
         }
-        return parts[0].chars().all(|d| d.is_digit(10))
-            && parts[1].chars().all(|d| d.is_digit(10));
+        return parts[0].chars().all(|d| d.is_ascii_digit())
+            && parts[1].chars().all(|d| d.is_ascii_digit());
     }
 
-    !c.is_empty() && c.chars().all(|d| d.is_digit(10))
+    !c.is_empty() && c.chars().all(|d| d.is_ascii_digit())
 }
 
 #[cfg(test)]

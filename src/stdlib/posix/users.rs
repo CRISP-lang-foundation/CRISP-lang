@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::eval::{Environment, RuntimeError};
+use crate::eval::Environment;
 use crate::value::Value;
 
 pub fn register(env: &mut Environment) {

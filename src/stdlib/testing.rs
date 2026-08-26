@@ -164,7 +164,7 @@ pub fn register(env: &mut Environment) {
             Ok(Value::Bool(true))
         }),
     );
-    
+
     // assert_throws() - check that a function throws an error
     env.define(
         "assert_throws",
@@ -181,24 +181,18 @@ pub fn register(env: &mut Environment) {
             let call_result = match func {
                 Value::NativeFn(f) => f(&[]),
                 Value::UserFn {
-                    params,
-                    body,
-                    env,
-                    ..
+                    params, body, env, ..
                 } => {
                     let new_env = Environment::with_parent(env.clone());
                     let mut interpreter = Interpreter::with_env(new_env);
 
                     for param in params {
-                        interpreter
-                            .env
-                            .borrow_mut()
-                            .define(&param, Value::Null);
+                        interpreter.env.borrow_mut().define(param, Value::Null);
                     }
 
                     let mut threw: Option<RuntimeError> = None;
                     for stmt in body {
-                        match interpreter.eval_statement(&stmt) {
+                        match interpreter.eval_statement(stmt) {
                             Ok(_) => {}
                             Err(RuntimeError::ReturnSignal(_)) => break,
                             Err(RuntimeError::BreakSignal) => {

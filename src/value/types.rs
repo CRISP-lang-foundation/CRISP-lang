@@ -15,10 +15,10 @@
 //! Types of values in CRISP
 
 use crate::eval::RuntimeError;
+use indexmap::IndexMap;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-use indexmap::IndexMap;
 
 #[derive(Debug, Clone)]
 pub enum Value {

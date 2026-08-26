@@ -18,7 +18,6 @@ mod ast;
 mod grammar;
 
 pub use ast::*;
-pub use grammar::*;
 
 use crate::lexer::{Lexer, Token, TokenKind};
 
@@ -135,9 +134,7 @@ mod tests {
     fn parses_let_statement() {
         let program = parse("let x = 5;");
         assert_eq!(program.statements.len(), 1);
-        assert!(
-            matches!(&program.statements[0], Stmt::Let { name, .. } if name == "x")
-        );
+        assert!(matches!(&program.statements[0], Stmt::Let { name, .. } if name == "x"));
     }
 
     #[test]

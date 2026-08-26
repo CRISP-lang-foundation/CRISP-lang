@@ -35,18 +35,6 @@ pub mod time;
 #[cfg(unix)]
 pub mod posix;
 
-pub use collections::*;
-pub use crypto::*;
-pub use filesystem::*;
-pub use io::*;
-pub use json::*;
-pub use math::*;
-pub use network::*;
-pub use process::*;
-pub use regex::*;
-pub use string::*;
-pub use testing::*;
-pub use time::*;
 
 use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
@@ -132,7 +120,7 @@ pub fn register_all(env: &mut Environment) {
             std::process::exit(code);
         }),
     );
-    
+
     register_builtins(env);
 }
 
@@ -158,7 +146,9 @@ fn register_errors(env: &mut Environment) {
         "assert",
         Value::NativeFn(|args| {
             if args.is_empty() {
-                return Err(RuntimeError::ArgumentError("assert needs a condition".into()));
+                return Err(RuntimeError::ArgumentError(
+                    "assert needs a condition".into(),
+                ));
             }
             if !args[0].as_bool() {
                 let msg = args
@@ -191,27 +181,27 @@ fn register_builtins(env: &mut Environment) {
 
     // type() — returns the type of a value
     env.define(
-	"type",
-	Value::NativeFn(|args| {
+        "type",
+        Value::NativeFn(|args| {
             if args.is_empty() {
-		return Err(RuntimeError::ArgumentError("type needs a value".into()));
+                return Err(RuntimeError::ArgumentError("type needs a value".into()));
             }
             let type_name = match &args[0] {
-		Value::Null => "null",
-		Value::Bool(_) => "bool",
-		Value::Int(_) => "int",
-		Value::Float(_) => "float",
-		Value::Str(_) => "string",
-		Value::Array(_) => "array",
-		Value::Hash(_) => "hash",
-		Value::Ref(_) => "ref",
-		Value::NativeFn(_) => "function",
-		Value::UserFn { .. } => "function",
-		Value::Class { .. } => "class",
-		Value::Object { .. } => "object",
+                Value::Null => "null",
+                Value::Bool(_) => "bool",
+                Value::Int(_) => "int",
+                Value::Float(_) => "float",
+                Value::Str(_) => "string",
+                Value::Array(_) => "array",
+                Value::Hash(_) => "hash",
+                Value::Ref(_) => "ref",
+                Value::NativeFn(_) => "function",
+                Value::UserFn { .. } => "function",
+                Value::Class { .. } => "class",
+                Value::Object { .. } => "object",
             };
             Ok(Value::Str(Rc::new(type_name.to_string())))
-	}),
+        }),
     );
 
     // int(value) → Int or Null
@@ -384,33 +374,31 @@ mod tests {
     use crate::value::Value;
     use assert_matches::assert_matches;
 
-    
     fn eval(code: &str) -> Value {
-	use crate::parser::Stmt;
-	
-	let lexer = Lexer::new(code);
-	let program = Parser::new(lexer).parse().expect("parse failed");
-	let mut interpreter = Interpreter::new();
-	let mut result = Value::Null;
+        use crate::parser::Stmt;
 
-	for stmt in &program.statements {
+        let lexer = Lexer::new(code);
+        let program = Parser::new(lexer).parse().expect("parse failed");
+        let mut interpreter = Interpreter::new();
+        let mut result = Value::Null;
+
+        for stmt in &program.statements {
             match stmt {
-		Stmt::Expr(expr) => {
+                Stmt::Expr(expr) => {
                     result = interpreter
-			.eval_expression(expr)
-			.expect("eval expression failed");
-		}
-		_ => {
+                        .eval_expression(expr)
+                        .expect("eval expression failed");
+                }
+                _ => {
                     result = interpreter
-			.eval_statement(stmt)
-			.expect("eval statement failed");
-		}
+                        .eval_statement(stmt)
+                        .expect("eval statement failed");
+                }
             }
-	}
-	
-	result
-    }
+        }
 
+        result
+    }
 
     #[test]
     fn len_works_on_strings_and_arrays() {

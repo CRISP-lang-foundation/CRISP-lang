@@ -98,7 +98,7 @@ pub enum TokenKind {
     Dollar,
     #[token("@")]
     At,
-    #[token("%")]  // Both modulo and hash sigil (context-dependent)
+    #[token("%")] // Both modulo and hash sigil (context-dependent)
     Modulo,
     #[token("&")]
     Ampersand,
@@ -210,7 +210,7 @@ pub enum TokenKind {
     // Regex literals - MUST come BEFORE Ident
     #[regex(r"m/[^/\n]*/", |lex| lex.slice().to_string())]
     Regex(String),
-    
+
     // qr/pattern/ - quoted regex
     #[regex(r"qr/[^/\n]*/", |lex| lex.slice().to_string())]
     QuotedRegex(String),

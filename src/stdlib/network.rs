@@ -176,14 +176,14 @@ pub fn register(env: &mut Environment) {
             if args.is_empty() {
                 return Err(RuntimeError::ArgumentError("http_get needs a URL".into()));
             }
-            
+
             let url = args[0].as_str();
 
             // Build agent with global timeout
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the request
@@ -211,7 +211,7 @@ pub fn register(env: &mut Environment) {
                     "http_get_with_headers needs URL and headers hash".into(),
                 ));
             }
-            
+
             let url = args[0].as_str();
             let headers = &args[1];
 
@@ -225,12 +225,12 @@ pub fn register(env: &mut Environment) {
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Build request with headers using header() method
             let mut request = agent.get(&url);
-            
+
             for (key, value) in headers_hash.iter() {
                 let header_value = value.as_str();
                 // Convert key to &str to avoid &&String issue
@@ -261,7 +261,7 @@ pub fn register(env: &mut Environment) {
                     "http_post needs URL and body".into(),
                 ));
             }
-            
+
             let url = args[0].as_str();
             let body_content = args[1].as_str();
 
@@ -269,7 +269,7 @@ pub fn register(env: &mut Environment) {
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the POST request - use send() instead of send_string()
@@ -298,7 +298,7 @@ pub fn register(env: &mut Environment) {
                     "http_post_json needs URL and JSON body".into(),
                 ));
             }
-            
+
             let url = args[0].as_str();
             let json_body = args[1].as_str();
 
@@ -306,7 +306,7 @@ pub fn register(env: &mut Environment) {
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the POST request with JSON
@@ -332,16 +332,18 @@ pub fn register(env: &mut Environment) {
         "http_delete",
         Value::NativeFn(|args| {
             if args.is_empty() {
-                return Err(RuntimeError::ArgumentError("http_delete needs a URL".into()));
+                return Err(RuntimeError::ArgumentError(
+                    "http_delete needs a URL".into(),
+                ));
             }
-            
+
             let url = args[0].as_str();
 
             // Build agent with timeout
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the DELETE request
@@ -369,7 +371,7 @@ pub fn register(env: &mut Environment) {
                     "http_put needs URL and body".into(),
                 ));
             }
-            
+
             let url = args[0].as_str();
             let body_content = args[1].as_str();
 
@@ -377,7 +379,7 @@ pub fn register(env: &mut Environment) {
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the PUT request - use send() instead of send_string()
@@ -406,7 +408,7 @@ pub fn register(env: &mut Environment) {
                     "http_patch needs URL and body".into(),
                 ));
             }
-            
+
             let url = args[0].as_str();
             let body_content = args[1].as_str();
 
@@ -414,7 +416,7 @@ pub fn register(env: &mut Environment) {
             let config = ureq::config::Config::builder()
                 .timeout_global(Some(std::time::Duration::from_secs(30)))
                 .build();
-                
+
             let agent = config.new_agent();
 
             // Make the PATCH request - use send() instead of send_string()
@@ -440,7 +442,7 @@ pub fn register(env: &mut Environment) {
 thread_local! {
     static STREAMS: RefCell<HashMap<usize, TcpStream>> = RefCell::new(HashMap::new());
     static LISTENERS: RefCell<HashMap<usize, TcpListener>> = RefCell::new(HashMap::new());
-    static NEXT_ID: RefCell<usize> = RefCell::new(1);
+    static NEXT_ID: RefCell<usize> = const { RefCell::new(1) };
 }
 
 fn store_stream(stream: TcpStream) -> usize {

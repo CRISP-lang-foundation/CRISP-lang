@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::eval::{Environment, RuntimeError};
@@ -21,7 +20,6 @@ use crate::value::Value;
 
 use indexmap::IndexMap;
 use serde_json::{Map, Number, Value as JsonValue};
-
 
 pub fn register(env: &mut Environment) {
     // to_json() - conversion of value to JSON string
@@ -89,14 +87,14 @@ pub fn register(env: &mut Environment) {
 
 fn value_to_json(value: &Value) -> Result<String, RuntimeError> {
     let json_value = crisp_value_to_json(value)?;
-    Ok(serde_json::to_string(&json_value)
-        .map_err(|e| RuntimeError::ArgumentError(format!("JSON serialization error: {}", e)))?)
+    serde_json::to_string(&json_value)
+        .map_err(|e| RuntimeError::ArgumentError(format!("JSON serialization error: {}", e)))
 }
 
 fn value_to_json_pretty(value: &Value) -> Result<String, RuntimeError> {
     let json_value = crisp_value_to_json(value)?;
-    Ok(serde_json::to_string_pretty(&json_value)
-        .map_err(|e| RuntimeError::ArgumentError(format!("JSON serialization error: {}", e)))?)
+    serde_json::to_string_pretty(&json_value)
+        .map_err(|e| RuntimeError::ArgumentError(format!("JSON serialization error: {}", e)))
 }
 
 fn crisp_value_to_json(value: &Value) -> Result<JsonValue, RuntimeError> {
@@ -150,7 +148,7 @@ fn json_to_value(json_value: JsonValue) -> Result<Value, RuntimeError> {
             Ok(Value::Array(Rc::new(RefCell::new(elements?))))
         }
         JsonValue::Object(map) => {
-            let mut hash = IndexMap::new(); 
+            let mut hash = IndexMap::new();
             for (key, value) in map {
                 hash.insert(key, json_to_value(value)?);
             }

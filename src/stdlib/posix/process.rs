@@ -127,7 +127,7 @@ pub fn register(env: &mut Environment) {
             let mut c_argv: Vec<*const libc::c_char> = argv.iter().map(|s| s.as_ptr()).collect();
             c_argv.push(std::ptr::null());
 
-            let result = unsafe { libc::execvp(c_program.as_ptr(), c_argv.as_ptr()) };
+            let _result = unsafe { libc::execvp(c_program.as_ptr(), c_argv.as_ptr()) };
 
             // If we get here, execvp failed
             Err(RuntimeError::IOError(

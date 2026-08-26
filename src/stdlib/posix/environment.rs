@@ -16,7 +16,6 @@ use crate::eval::{Environment, RuntimeError};
 use crate::value::Value;
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use indexmap::IndexMap;

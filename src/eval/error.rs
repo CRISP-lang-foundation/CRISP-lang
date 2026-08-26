@@ -14,8 +14,8 @@
 
 //! Error handling for the interpreter
 
-use thiserror::Error;
 use crate::value::Value;
+use thiserror::Error;
 
 #[derive(Error, Debug, Clone)]
 pub enum RuntimeError {
